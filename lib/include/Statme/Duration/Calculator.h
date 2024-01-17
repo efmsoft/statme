@@ -5,11 +5,12 @@
 #include <string>
 
 #include <Statme/Duration/Measurement.h>
+#include <Statme/Macros.h>
 
 namespace Duration
 {
   class Meter;
-  struct Calculator
+  struct STATMELNK Calculator
   {
     Meter* Owner;
     MeasurementPtr Parent;

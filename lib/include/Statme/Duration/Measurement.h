@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <Statme/Duration/DurationCounter.h>
+#include <Statme/Macros.h>
 
 namespace Duration
 {
@@ -11,7 +12,7 @@ namespace Duration
   typedef std::shared_ptr<Measurement> MeasurementPtr;
   typedef std::vector<MeasurementPtr> MeasurementArray;
 
-  struct Measurement
+  struct STATMELNK Measurement
   {
     int64_t Duration;
     const char* Name;

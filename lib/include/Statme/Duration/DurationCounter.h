@@ -4,10 +4,11 @@
 #include <stdint.h>
 
 #include <Logme/Logme.h>
+#include <Statme/Macros.h>
 
 #pragma pack(push, 1)
 
-struct DurationCounterValue
+struct STATMELNK DurationCounterValue
 {
   DurationCounterValue();
 
@@ -19,7 +20,7 @@ struct DurationCounterValue
 };
 #pragma pack(pop)
 
-class DurationCounter
+class STATMELNK DurationCounter
 {
   static std::atomic<DurationCounter*> Head;
 

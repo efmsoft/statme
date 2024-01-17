@@ -3,11 +3,12 @@
 #include <string>
 
 #include <Logme/Logme.h>
+#include <Statme/Macros.h>
 
 namespace Duration
 {
   class Meter;
-  class Printer
+  class STATMELNK Printer
   {
     Meter& Target;
     const Logme::ID& CH;

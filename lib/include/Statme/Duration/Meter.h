@@ -6,11 +6,12 @@
 #include <Statme/Duration/Calculator.h>
 #include <Statme/Duration/Printer.h>
 #include <Statme/Duration/ThreadData.h>
+#include <Statme/Macros.h>
 #include <Syncme/CritSection.h>
 
 namespace Duration
 {
-  class Meter
+  class STATMELNK Meter
   {
     CritSection Lock;
     ThreadDataMap Map;
