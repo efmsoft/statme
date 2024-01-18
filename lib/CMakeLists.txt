@@ -47,5 +47,9 @@ if(NOT ${USE_STATME_ONLY})
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
   target_link_libraries(statmed LINK_PRIVATE syncme ${LOGME_LIBRARIES})
+
+  if(NOT WIN32)
+    target_link_libraries(statmed LINK_PUBLIC pthread) 
+  endif()
 endif()
  
