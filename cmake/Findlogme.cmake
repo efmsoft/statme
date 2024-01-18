@@ -68,5 +68,5 @@ else()
 endif()
 
 if(USE_LOGME)
-  set(LOGME_LIB logme)
+  set(LOGME_LIBRARIES logme allstat)
 endif()

@@ -10,7 +10,7 @@
 namespace Duration
 {
   class Meter;
-  struct STATMELNK Calculator
+  struct Calculator
   {
     Meter* Owner;
     MeasurementPtr Parent;
@@ -18,8 +18,8 @@ namespace Duration
     uint64_t ThreadID;
 
   public:
-    Calculator(Meter* meter, MeasurementPtr parent);
-    ~Calculator();
+    STATMELNK Calculator(Meter* meter, MeasurementPtr parent);
+    STATMELNK ~Calculator();
   };
 
   typedef std::shared_ptr<Calculator> CalculatorPtr;

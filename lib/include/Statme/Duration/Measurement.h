@@ -12,7 +12,7 @@ namespace Duration
   typedef std::shared_ptr<Measurement> MeasurementPtr;
   typedef std::vector<MeasurementPtr> MeasurementArray;
 
-  struct STATMELNK Measurement
+  struct Measurement
   {
     int64_t Duration;
     const char* Name;
@@ -20,6 +20,6 @@ namespace Duration
     MeasurementArray Child;
 
   public:
-    Measurement(DurationCounter& dc, const char* name);
+    STATMELNK Measurement(DurationCounter& dc, const char* name);
   };
 }

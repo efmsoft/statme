@@ -20,7 +20,7 @@ struct STATMELNK DurationCounterValue
 };
 #pragma pack(pop)
 
-class STATMELNK DurationCounter
+class DurationCounter
 {
   static std::atomic<DurationCounter*> Head;
 
@@ -36,19 +36,19 @@ class STATMELNK DurationCounter
   std::atomic<long> Lock;
 
 public:
-  DurationCounter(const char* name);
+  STATMELNK DurationCounter(const char* name);
 
-  void Reset();
-  void Add(uint64_t duration);
+  STATMELNK void Reset();
+  STATMELNK void Add(uint64_t duration);
 
-  uint64_t Minimal() const;
-  uint64_t Maximal() const;
-  uint64_t Average() const;
-  uint64_t Sampling() const;
+  STATMELNK uint64_t Minimal() const;
+  STATMELNK uint64_t Maximal() const;
+  STATMELNK uint64_t Average() const;
+  STATMELNK uint64_t Sampling() const;
 
-  const char* GetName() const;
-  operator uint64_t();
-  operator DurationCounterValue();
+  STATMELNK const char* GetName() const;
+  STATMELNK operator uint64_t();
+  STATMELNK operator DurationCounterValue();
 
-  static void PrintStatistics(const Logme::ID& channel);
+  STATMELNK static void PrintStatistics(const Logme::ID& channel);
 };

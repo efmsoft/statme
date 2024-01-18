@@ -11,22 +11,22 @@
 
 namespace Duration
 {
-  class STATMELNK Meter
+  class Meter
   {
     CritSection Lock;
     ThreadDataMap Map;
 
   public:
-    Meter();
+    STATMELNK Meter();
 
-    CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name);
-    void PrintResults(const Logme::ID& ch, const std::string& title);
+    STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name);
+    STATMELNK void PrintResults(const Logme::ID& ch, const std::string& title);
 
     struct Handle
     {
       CalculatorPtr Calculator;
     };
-    Handle* StartMeasurement2(DurationCounter& dc, const char* name);
+    STATMELNK Handle* StartMeasurement2(DurationCounter& dc, const char* name);
 
   private:
     friend Calculator;
