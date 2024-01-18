@@ -39,6 +39,10 @@ if(NOT ${USE_STATME_ONLY})
   target_include_directories(statmed PUBLIC ${STATME_INCLUDE_DIRS})
   target_compile_definitions(statmed PRIVATE _STATME_DLL_BUILD_)
 
+  if(NOT WIN32)
+    target_compile_options(statmed PRIVATE -fPIC)
+  endif()
+
   if(USE_ALLSTAT)
     target_compile_definitions(statmed PUBLIC USE_ALLSTAT)
   endif()
