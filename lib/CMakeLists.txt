@@ -40,7 +40,7 @@ if(NOT ${USE_STATME_ONLY})
   target_compile_definitions(statmed PRIVATE _STATME_DLL_BUILD_)
 
   if(NOT WIN32)
-    target_compile_options(statmed PRIVATE -fPIC)
+    target_compile_options(statmed PRIVATE -fPIC -fvisibility=default)
   endif()
 
   if(USE_ALLSTAT)
