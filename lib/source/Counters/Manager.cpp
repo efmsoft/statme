@@ -3,6 +3,7 @@
 #include <Logme/Logme.h>
 
 #include <Syncme/Logger/Log.h>
+#include <Syncme/ProcessThreadId.h>
 #include <Syncme/SetThreadName.h>
 #include <Syncme/Sockets/API.h>
 #include <Syncme/Sockets/SocketPair.h>
@@ -10,10 +11,19 @@
 #include <Syncme/TickCount.h>
 
 #include <Statme/Counters/Counter.h>
+#include <Statme/Counters/Holder.h>
 #include <Statme/Counters/Manager.h>
 
 using namespace Syncme;
 using namespace Counters;
+
+#define THREAD_COUNTER(name) \
+  Counters::Holder holder(AddCounter(name, "thread")); \
+  holder.Ptr->SetProperty("thread", std::to_string(Syncme::GetCurrentThreadId()))
+
+#define SET_CUR_THREAD_NAME_EX(name) \
+  SET_CUR_THREAD_NAME(name); \
+  THREAD_COUNTER(name)
 
 Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   : Modified(0)
@@ -206,7 +216,7 @@ void Manager::Stop()
 
 void Manager::Worker()
 {
-  //SET_CUR_THREAD_NAME_EX2(this, "Counters worker");
+  SET_CUR_THREAD_NAME_EX("Counters worker");
 
   for (;;)
   {
@@ -242,7 +252,7 @@ void Manager::Worker()
 
 void Manager::Listener()
 {
-  //SET_CUR_THREAD_NAME_EX2(this, "Counters listener");
+  SET_CUR_THREAD_NAME_EX("Counters listener");
 
   ThreadsList threads;
   for (;;)
