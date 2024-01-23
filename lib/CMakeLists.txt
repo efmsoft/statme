@@ -20,6 +20,7 @@ set(STATME_INCLUDE_DIRS
 set(STATME_WIN32_DEFS
   _WINSOCK_DEPRECATED_NO_WARNINGS
   _CRT_SECURE_NO_WARNINGS
+  USE_LOGME
 )
 
 if(NOT ${USE_STATMED_ONLY})
@@ -50,9 +51,11 @@ if(NOT ${USE_STATME_ONLY})
   if(WIN32)
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
-  target_link_libraries(statmed LINK_PRIVATE syncme ${LOGME_LIBRARIES})
+  target_link_libraries(statmed LINK_PRIVATE syncme ${LOGME_LIBRARIES} ${OPENSSL_LIBRARIES})
 
-  if(NOT WIN32)
+  if(WIN32)
+    target_link_libraries(statmed LINK_PUBLIC WS2_32.Lib) 
+  else()
     target_link_libraries(statmed LINK_PUBLIC pthread) 
   endif()
 endif()
