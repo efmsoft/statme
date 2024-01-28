@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <mutex>
 
 #include <Syncme/Config/Config.h>
@@ -11,8 +12,13 @@
 
 namespace Counters
 {
-  class Manager
+  class Manager;
+  typedef std::shared_ptr<Manager> ManagerPtr;
+
+  class Manager : public std::enable_shared_from_this<Manager>
   {
+    static Manager* Instance;
+
     std::mutex Lock;
     CounterArray Counters;
     CounterArray Deleted;
@@ -30,6 +36,8 @@ namespace Counters
   public:
     STATMELNK Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent);
     STATMELNK ~Manager();
+
+    STATMELNK static ManagerPtr GetInstance();
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
 

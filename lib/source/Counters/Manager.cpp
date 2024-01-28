@@ -11,19 +11,14 @@
 #include <Syncme/TickCount.h>
 
 #include <Statme/Counters/Counter.h>
+#include <Statme/Counters/Counters.h>
 #include <Statme/Counters/Holder.h>
 #include <Statme/Counters/Manager.h>
 
 using namespace Syncme;
 using namespace Counters;
 
-#define THREAD_COUNTER(name) \
-  Counters::Holder holder(AddCounter(name, "thread")); \
-  holder.Ptr->SetProperty("thread", std::to_string(Syncme::GetCurrentThreadId()))
-
-#define SET_CUR_THREAD_NAME_EX(name) \
-  SET_CUR_THREAD_NAME(name); \
-  THREAD_COUNTER(name)
+Manager* Manager::Instance;
 
 Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   : Modified(0)
@@ -34,6 +29,7 @@ Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   , WorkerThread(nullptr)
   , Exiting(false)
 {
+  Instance = this;
 }
 
 Manager::~Manager()
@@ -45,6 +41,11 @@ Manager::~Manager()
   assert(Counters.empty());
   
   CloseSocket();
+}
+
+ManagerPtr Manager::GetInstance()
+{
+  return Instance->shared_from_this();
 }
 
 std::mutex& Manager::GetLock()
