@@ -5,6 +5,7 @@
 #include <Statme/Counters/Holder.h>
 #include <Statme/Counters/Manager.h>
 #include <Syncme/ProcessThreadId.h>
+#include <Syncme/SetThreadName.h>
 
 #define CNTR_PROP_TYPE "type"
 #define CNTR_PROP_URL "url"
