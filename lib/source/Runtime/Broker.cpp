@@ -41,7 +41,7 @@ void Broker::SetSocketConfig(Syncme::ConfigPtr config)
   Config = config;
 }
 
-Cookie Broker::RegistrerTopic(
+Cookie Broker::RegisterTopic(
   const char* name
   , TPrint print
   , const StringList& subtopics
@@ -64,7 +64,7 @@ Cookie Broker::RegistrerTopic(
   return topic.get();
 }
 
-void Broker::UnregistrerTopic(Cookie cookie)
+void Broker::UnregisterTopic(Cookie cookie)
 {
   std::lock_guard lock(Lock);
 

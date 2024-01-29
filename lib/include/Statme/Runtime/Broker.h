@@ -37,8 +37,8 @@ namespace Runtime
     STATMELNK ~Broker();
 
     STATMELNK static BrokerPtr GetInstance();
-    STATMELNK Cookie RegistrerTopic(const char* name, TPrint print, const StringList& subtopics = StringList());
-    STATMELNK void UnregistrerTopic(Cookie);
+    STATMELNK Cookie RegisterTopic(const char* name, TPrint print, const StringList& subtopics = StringList());
+    STATMELNK void UnregisterTopic(Cookie);
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
 
@@ -51,3 +51,9 @@ namespace Runtime
     void ConnectionWorker(int socket);
   };
 }
+
+#define RUNTIME_TOPIC_REGISTER(n, p, s) \
+  Runtime::Broker::GetInstance()->RegisterTopic(n, p, s)
+
+#define RUNTIME_TOPIC_UNREGISTER(c) \
+  Runtime::Broker::GetInstance()->UnregisterTopic(c)

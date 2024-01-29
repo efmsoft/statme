@@ -8,7 +8,7 @@
 namespace Runtime
 {
   typedef std::list<std::string> StringList;
-  typedef std::function<std::string(const std::string&, const StringList&)> TPrint;
+  typedef std::function<std::string(const std::string&, const std::string&)> TPrint;
 
   struct Topic
   {
