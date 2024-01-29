@@ -20,9 +20,12 @@ namespace Counters
     static Manager* Instance;
 
     std::mutex Lock;
-    CounterArray Counters;
-    CounterArray Deleted;
     uint64_t Modified;
+    CounterArray Counters;
+
+    CounterArray Deleted;
+    HEvent DeletedEvent;
+    uint32_t WorkerTimeout;
 
     Syncme::ThreadPool::Pool& Pool;
     HEvent& StopEvent;

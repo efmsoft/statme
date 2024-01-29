@@ -22,6 +22,8 @@ Manager* Manager::Instance;
 
 Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   : Modified(0)
+  , DeletedEvent(CreateSynchronizationEvent())
+  , WorkerTimeout(FOREVER)
   , Pool(pool)
   , StopEvent(stopEvent)
   , Socket(-1)
@@ -41,6 +43,7 @@ Manager::~Manager()
   assert(Counters.empty());
   
   CloseSocket();
+  CloseHandle(DeletedEvent);
 }
 
 ManagerPtr Manager::GetInstance()
@@ -113,6 +116,7 @@ void Manager::DeleteCounter(CounterPtr counter)
       if (!Exiting)
         Deleted.push_back(counter);
 
+      SetEvent(DeletedEvent);
       break;
     }
   }
@@ -196,6 +200,12 @@ bool Manager::Start(int port)
 
 void Manager::Stop()
 {
+  if (GetEventState(StopEvent) == STATE::NOT_SIGNALLED)
+  {
+    // !?!?!
+    SetEvent(StopEvent);
+  }
+
   CloseSocket();
 
   if (WorkerThread)
@@ -219,15 +229,12 @@ void Manager::Worker()
 {
   SET_CUR_THREAD_NAME_EX("Counters worker");
 
-  for (;;)
+  EventArray arr(StopEvent, DeletedEvent);
+  while (WaitForMultipleObjects(arr, false, WorkerTimeout) != WAIT_RESULT::OBJECT_0)
   {
-    auto rc = WaitForSingleObject(StopEvent, 1000);
-    if (rc == WAIT_RESULT::OBJECT_0)
-      break;
-
+    std::lock_guard<std::mutex> guard(Lock);
     auto t = GetTimeInMillisec();
 
-    std::lock_guard<std::mutex> guard(Lock);
     for (bool cont = true; cont;)
     {
       cont = false;
@@ -245,6 +252,8 @@ void Manager::Worker()
         }
       }
     }
+
+    WorkerTimeout = Deleted.empty() ? FOREVER : 1000;
   }
 
   std::lock_guard<std::mutex> guard(Lock);
@@ -256,12 +265,8 @@ void Manager::Listener()
   SET_CUR_THREAD_NAME_EX("Counters listener");
 
   ThreadsList threads;
-  for (;;)
+  while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
   {
-    auto rc = WaitForSingleObject(StopEvent, 0);
-    if (rc == WAIT_RESULT::OBJECT_0)
-      break;
-
     int accept_sock = (int)accept(Socket, nullptr, nullptr);
     if (accept_sock == -1)
     {
@@ -295,12 +300,8 @@ void Manager::ConnectionWorker(int socket)
 
   uint64_t lastReq = GetTimeInMillisec();
 
-  for (;;)
+  while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
   {
-    auto rc = WaitForSingleObject(StopEvent, 0);
-    if (rc == WAIT_RESULT::OBJECT_0)
-      break;
-
     std::vector<char> buffer(64 * 1024);
     int n = pair.Client->Read(buffer, 500);
     if (n < 0 || pair.Client->Peer.Disconnected)
