@@ -16,6 +16,8 @@
 using namespace Runtime;
 using namespace Syncme;
 
+Broker* Broker::Instance = nullptr;
+
 Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   : Pool(pool)
   , StopEvent(stopEvent)
