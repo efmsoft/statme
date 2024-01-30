@@ -48,6 +48,9 @@ Manager::~Manager()
 
 ManagerPtr Manager::GetInstance()
 {
+  if (Instance == nullptr)
+    return ManagerPtr();
+
   return Instance->shared_from_this();
 }
 
