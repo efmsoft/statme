@@ -11,6 +11,7 @@ namespace HTTP
     int Major;
     int Minor;
 
+    STATMELNK Version();
     STATMELNK Version(int major, int minor);
 
     STATMELNK bool operator<(const Version& v);

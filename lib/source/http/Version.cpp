@@ -4,6 +4,12 @@
 
 using namespace HTTP;
 
+Version::Version()
+  : Major(1)
+  , Minor(1)
+{
+}
+
 Version::Version(int major, int minor)
   : Major(major)
   , Minor(minor)
