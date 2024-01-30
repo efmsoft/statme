@@ -293,9 +293,9 @@ void Broker::ConnectionWorker(int socket)
       std::string uri(req.Uri);
 
       char* nt = nullptr;
-      char* p = strtok_s(&uri[0], "/", &nt);
-      char* t = strtok_s(nullptr, "/", &nt);
-      char* a = strtok_s(nullptr, "/", &nt);
+      char* p = strtok_r(&uri[0], "/", &nt);
+      char* t = strtok_r(nullptr, "/", &nt);
+      char* a = strtok_r(nullptr, "/", &nt);
 
       std::string topic(t ? t : "");
       std::string arg(a ? a : "");
