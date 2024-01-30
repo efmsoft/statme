@@ -2,6 +2,7 @@
 #include <format>
 #include <iostream>
 #include <sstream>
+#include <string.h>
 
 #include <Statme/http/Headers.h>
 
