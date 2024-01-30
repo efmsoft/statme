@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 
 #include <Logme/Logme.h>
@@ -11,7 +12,15 @@
 #include <Syncme/TickCount.h>
 
 #include <Statme/Counters/Counters.h>
+#include <Statme/http/Headers.h>
 #include <Statme/Runtime/Broker.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+/* We are on Windows */
+# define strtok_r strtok_s
+#else
+#include <string.h>
+#endif 
 
 using namespace Runtime;
 using namespace Syncme;
@@ -218,6 +227,23 @@ void Broker::Listener()
   }
 }
 
+static bool AcceptsHtml(HTTP::Header::ReqHeaders& req)
+{
+  auto arr = req.GetHeader("accept");
+  if (arr == nullptr)
+    return false;
+
+  for (auto& a : *arr)
+  {
+    std::string s(a);
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+
+    if (s == "text/html")
+      return true;
+  }
+  return false;
+}
+
 void Broker::ConnectionWorker(int socket)
 {
   Logme::ID ch = CH;
@@ -227,58 +253,71 @@ void Broker::ConnectionWorker(int socket)
   pair.Client->Attach(socket);
   pair.Client->Configure();
 
-  uint64_t lastReq = GetTimeInMillisec();
-
   while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
   {
     std::vector<char> buffer(64 * 1024);
-    int n = pair.Client->Read(buffer, 500);
-    if (n < 0 || pair.Client->Peer.Disconnected)
+    int n = pair.Client->Read(buffer);
+    if (n <= 0 || pair.Client->Peer.Disconnected)
       break;
 
-    if (n == 0)
+    std::string rdata(&buffer[0], buffer.size());
+    size_t pos = Find2CRLF(rdata);
+    if (pos <= 0)
+      break;
+
+    HTTP::Header::ReqHeaders req;
+    if (req.Parse(rdata.c_str(), rdata.size()) != HEADER_ERROR::NONE)
+      break;
+
+    if (req.Method != "GET" || req.Protocol.Major != 1)
+      break;
+
+    int code = 200;
+    std::stringstream ss;
+    bool html = AcceptsHtml(req);
+    if (req.Uri == "/topics" || req.Uri == "/topics/")
     {
-      auto silence = GetTimeInMillisec() - lastReq;
+      std::lock_guard lock(Lock);
+      ss << "HTTP/1.1 200 OK\r\n\r\n";
 
-      if (silence > 60000)
+      for (auto& t : Topics)
       {
-        Json::Value res;
-        res["ok"] = false;
-        res["descr"] = "wake up";
-        pair.Client->WriteStr(Json::FastWriter().write(res));
+        if (html)
+          ss << "<a href=\"" << "/topics/" << t->Name << "\">" << t->Name << "</a><br/>";
+        else
+          ss << t->Name << "\n";
+      }
+    }
+    else if (req.Uri.starts_with("/topics/"))
+    {
+      std::string uri(req.Uri);
 
-        lastReq = GetTimeInMillisec();
+      char* nt = nullptr;
+      char* p = strtok_s(&uri[0], "/", &nt);
+      char* t = strtok_s(nullptr, "/", &nt);
+      char* a = strtok_s(nullptr, "/", &nt);
+
+      std::string topic(t ? t : "");
+      std::string arg(a ? a : "");
+
+      std::lock_guard lock(Lock);
+      for (auto& t : Topics)
+      {
+        if (t->Name == topic)
+        {
+          ss << "HTTP/1.1 200 OK\r\n\r\n";
+          ss << t->Print(topic, arg);
+          break;
+        }
       }
 
-      continue;
+      if (ss.str().empty())
+        ss << "HTTP/1.1 404 NotFound\r\n\r\n";
     }
+    else
+      ss << "HTTP/1.1 404 NotFound\r\n\r\n";
 
-    std::string cmd(&buffer[0], n);
-    lastReq = GetTimeInMillisec();
-
-    Json::Value root;
-    Json::Reader reader;
-    if (!reader.parse(cmd, root))
-      continue;
-
-    std::string command;
-    uint64_t timestamp = 0;
-
-    if (root["cmd"].isString())
-      command = root["cmd"].asString();
-
-    if (root["timestamp"].isUInt64())
-      timestamp = root["timestamp"].asUInt64();
-
-    if (command == "exit")
-    {
-      pair.Close();
-      break;
-    }
-
-    Json::Value res;
-    res["ok"] = false;
-    res["descr"] = "unsupported command";
-    pair.Client->WriteStr(Json::FastWriter().write(res));
+    pair.Client->WriteStr(ss.str());
+    break;
   }
 }
