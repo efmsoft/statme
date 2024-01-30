@@ -1,0 +1,131 @@
+#pragma once
+
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <Statme/http/Find2CRLF.h>
+#include <Statme/http/StreamData.h>
+#include <Statme/http/Version.h>
+#include <Statme/Macros.h>
+
+namespace HTTP
+{
+  namespace Header
+  {
+    typedef std::vector<std::string> StringArray;
+    typedef std::shared_ptr<StringArray> StringArrayPtr;
+
+    struct Field
+    {
+      std::string Key;
+      StringArray Values;
+    };
+
+    typedef std::shared_ptr<Field> FieldPtr;
+    typedef std::list<FieldPtr> FieldList;
+
+    struct Headers
+    {
+      size_t Size;
+      std::string ReqRes;
+      FieldList Header;
+      std::string Body;
+
+      bool LowerCase;
+
+    public:
+      STATMELNK Headers(bool lowerCase = false);
+      STATMELNK virtual ~Headers();
+
+      STATMELNK virtual HEADER_ERROR Parse(const StreamData& data);
+      STATMELNK virtual HEADER_ERROR Parse(const char* data, size_t length);
+      
+      STATMELNK bool Empty() const;
+
+      STATMELNK std::string ToString(
+        const char* indent = ""
+        , bool dropTermination = false
+      ) const;
+
+      STATMELNK std::string BodyToString(
+        const char* indent = ""
+        , bool InitialLF = false
+        , size_t limit = 256
+      ) const;
+
+      STATMELNK StringArrayPtr GetHeader(
+        const std::string& field
+        , bool lowercase = false
+        , const char* splitter = ","
+      ) const;
+
+      STATMELNK void DeleteHeader(const std::string& field);
+      STATMELNK void AddHeader(const std::string& field, const std::string& value);
+      STATMELNK void SetHeader(const std::string& field, const std::string& value);
+      STATMELNK FieldList::const_iterator FindHeader(const std::string& field) const;
+      STATMELNK bool HasHeader(const std::string& field);
+
+      STATMELNK std::string GetFirstValue(
+        const std::string& field
+        , bool lowercase = true
+        , const char* splitter = nullptr
+        , const std::string& def = std::string()
+      ) const;
+
+      STATMELNK static bool Complete(const std::vector<char>& data);
+      STATMELNK static bool Complete(const char* data, size_t length);
+      STATMELNK static size_t SizeOfHeader(const char* data, size_t length);
+
+      STATMELNK static const char* sstrtok(
+        char* str,
+        const char* delimiters,
+        char** context
+      );
+
+      STATMELNK static bool Printable(const std::string& str);
+      STATMELNK static size_t CalcPrintable(const std::string& str);
+
+    private:
+      static void PushValue(StringArrayPtr arr, const std::string& value, bool lowrcase);
+    };
+
+    struct ReqHeaders : public Headers 
+    {
+      std::string Method;
+      std::string Uri;
+      Version Protocol;
+
+    public:
+      STATMELNK ReqHeaders();
+
+      STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
+      STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;
+
+      STATMELNK bool IsHeadRequest() const;
+
+    private:
+      HEADER_ERROR ParseReqLine();
+    };
+
+    struct ResHeaders : public Headers
+    {
+      Version Protocol;
+      int Status;
+      std::string Reason;
+
+    public:
+      STATMELNK ResHeaders();
+
+      STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
+      STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;
+
+    private:
+      HEADER_ERROR ParseResLine();
+    };
+  }
+}
+
+#define HEADERS_STR(h) h.ToString("  ", true).c_str()
+#define BODY_STR(h) h.BodyToString("  ", true).c_str()
