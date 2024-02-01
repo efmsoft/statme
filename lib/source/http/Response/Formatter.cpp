@@ -31,3 +31,10 @@ void Formatter::AddLine(const std::string& line)
 {
   PRE.push_back(line);
 }
+
+TablePtr Formatter::CreateTable()
+{
+  TablePtr table = std::make_shared<Table>();
+  Tables.push_back(table);
+  return table;
+}

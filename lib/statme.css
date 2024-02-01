@@ -5,6 +5,18 @@ body {
     color: #000000;
 }
 
+table {
+    border: solid 1px black;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    text-align: left;
+    border: solid 1px black;
+    padding: 6px;
+}
+
 a:visited, a:link {
     color: #0000d0;
     padding: 3px;

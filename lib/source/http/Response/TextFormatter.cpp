@@ -23,6 +23,21 @@ std::string TextFormatter::Run()
     ss << "\n";
   }
 
+  for (auto& table : Tables)
+  {
+    for (auto& r : table->Rows)
+    {
+      for (auto& c : r->Columns)
+      {
+        ss << c << " ";
+      }
+
+      ss << "\n";
+    }
+
+    ss << "\n";
+  }
+
   if (!PRE.empty())
   {
     for (auto& t : PRE)

@@ -26,6 +26,24 @@ std::string HtmlFormatter::Run()
 
   ss << "<div class=\"content\">";
 
+  for (auto& table : Tables)
+  {
+    ss << "<table>\n";
+    for (auto& r : table->Rows)
+    {
+      ss << "<tr>\n";
+      for (auto& c : r->Columns)
+      {
+        if (r->Header)
+          ss << "<th>" << c << "</th>";
+        else
+          ss << "<td>" << c << "</td>";
+      }
+      ss << "</tr>\n";
+    }
+    ss << "</table>\n";
+  }
+
   if (!PRE.empty())
   {
     ss << "<pre>";
@@ -35,7 +53,7 @@ std::string HtmlFormatter::Run()
     }
     ss << "</pre>\n";
   }
-  
+
   ss << "</div></body></html>";
   return ss.str();
 }

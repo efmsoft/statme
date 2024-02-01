@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 
+#include <Statme/http/Response/Table.h>
 #include <Statme/Macros.h>
 
 namespace HTTP
@@ -25,6 +26,7 @@ namespace HTTP
     {
       TOCItemArray TOC;
       StringArray PRE;
+      TableArray Tables;
 
     public:
       STATMELNK virtual ~Formatter();
@@ -40,6 +42,8 @@ namespace HTTP
 
       STATMELNK void AddLine(const std::stringstream& ss);
       STATMELNK void AddLine(const std::string& line);
+
+      STATMELNK TablePtr CreateTable();
     };
 
     typedef std::shared_ptr<Formatter> FormatterPtr;
