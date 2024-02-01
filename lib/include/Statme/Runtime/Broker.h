@@ -7,6 +7,7 @@
 #include <Syncme/Sync.h>
 #include <Syncme/ThreadPool/Pool.h>
 
+#include <Statme/http/Headers.h>
 #include <Statme/Macros.h>
 #include <Statme/Runtime/Topic.h>
 
@@ -49,6 +50,13 @@ namespace Runtime
     void Listener();
     void CloseSocket();
     void ConnectionWorker(int socket);
+
+    bool AcceptsHtml(const HTTP::Header::ReqHeaders& req) const;
+    std::string ProcessRequest(const HTTP::Header::ReqHeaders& req);
+
+    typedef std::vector<std::string> StringArray;
+    StringArray SplitUrl(const std::string& url);
+    TopicPtr GetTopic(const StringArray& uri);
   };
 }
 

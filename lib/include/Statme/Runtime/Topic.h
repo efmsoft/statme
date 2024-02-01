@@ -5,10 +5,12 @@
 #include <memory>
 #include <string>
 
+#include <Statme/http/Response/Formatter.h>
+
 namespace Runtime
 {
   typedef std::list<std::string> StringList;
-  typedef std::function<std::string(const std::string&, const std::string&)> TPrint;
+  typedef std::function<bool(HTTP::Response::Formatter&, const std::string&, const std::string&)> TPrint;
 
   struct Topic
   {

@@ -12,7 +12,7 @@
 #include <Syncme/TickCount.h>
 
 #include <Statme/Counters/Counters.h>
-#include <Statme/http/Headers.h>
+#include <Statme/http/Response/Generator.h>
 #include <Statme/Runtime/Broker.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -227,7 +227,7 @@ void Broker::Listener()
   }
 }
 
-static bool AcceptsHtml(HTTP::Header::ReqHeaders& req)
+bool Broker::AcceptsHtml(const HTTP::Header::ReqHeaders& req) const
 {
   auto arr = req.GetHeader("accept");
   if (arr == nullptr)
@@ -242,6 +242,75 @@ static bool AcceptsHtml(HTTP::Header::ReqHeaders& req)
       return true;
   }
   return false;
+}
+
+Broker::StringArray Broker::SplitUrl(const std::string& url)
+{
+  StringArray arr;
+  std::string uri(url);
+
+  char* nt = nullptr;
+  for (char* p = strtok_r(&uri[0], "/", &nt); p; p = strtok_r(nullptr, "/", &nt))
+    arr.push_back(p);
+
+  return arr;
+}
+
+TopicPtr Broker::GetTopic(const StringArray& uri)
+{
+  if (uri.empty())
+    return TopicPtr();
+
+  std::lock_guard lock(Lock);
+
+  auto& topic = uri[0];
+  for (auto& t : Topics)
+  {
+    if (t->Name == topic)
+      return t;
+  }
+  return TopicPtr();
+}
+
+std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
+{
+  using namespace HTTP::Response;
+
+  OK ok;
+  FormatterPtr f = AcceptsHtml(req) ? 
+    std::make_shared<HtmlFormatter>()
+    : (FormatterPtr)std::make_shared<TextFormatter>();
+
+  ok.SetFormatter(f);
+  
+  StringArray url = SplitUrl(req.Uri);
+  if (url.empty())
+  {
+    std::lock_guard lock(Lock);
+
+    for (auto& t : Topics)
+      f->AddTOCItem(t->Name, "/" + t->Name);
+  }
+  else
+  {
+    auto uri = SplitUrl(req.Uri);
+    
+    TopicPtr topic = GetTopic(uri);
+    if (topic == nullptr)
+      return NotFound.Data();
+
+    f->AddTOCItem("Home", "/");
+    f->AddTOCItem(topic->Name, "/" + topic->Name);
+
+    for (auto& s : topic->Subtopics)
+      f->AddTOCItem(s, "/" + topic->Name + "/" + s);
+    
+    std::string arg1 = uri.size() > 1 ? uri[1] : "";
+    std::string arg2 = uri.size() > 2 ? uri[2] : "";
+    if (!topic->Print(*f, arg1, arg2))
+      return InternalServerError.Data();
+  }
+  return ok.Data();
 }
 
 void Broker::ConnectionWorker(int socket)
@@ -272,52 +341,8 @@ void Broker::ConnectionWorker(int socket)
     if (req.Method != "GET" || req.Protocol.Major != 1)
       break;
 
-    int code = 200;
-    std::stringstream ss;
-    bool html = AcceptsHtml(req);
-    if (req.Uri == "/topics" || req.Uri == "/topics/")
-    {
-      std::lock_guard lock(Lock);
-      ss << "HTTP/1.1 200 OK\r\n\r\n";
-
-      for (auto& t : Topics)
-      {
-        if (html)
-          ss << "<a href=\"" << "/topics/" << t->Name << "\">" << t->Name << "</a><br/>";
-        else
-          ss << t->Name << "\n";
-      }
-    }
-    else if (req.Uri.starts_with("/topics/"))
-    {
-      std::string uri(req.Uri);
-
-      char* nt = nullptr;
-      char* p = strtok_r(&uri[0], "/", &nt);
-      char* t = strtok_r(nullptr, "/", &nt);
-      char* a = strtok_r(nullptr, "/", &nt);
-
-      std::string topic(t ? t : "");
-      std::string arg(a ? a : "");
-
-      std::lock_guard lock(Lock);
-      for (auto& t : Topics)
-      {
-        if (t->Name == topic)
-        {
-          ss << "HTTP/1.1 200 OK\r\n\r\n";
-          ss << t->Print(topic, arg);
-          break;
-        }
-      }
-
-      if (ss.str().empty())
-        ss << "HTTP/1.1 404 NotFound\r\n\r\n";
-    }
-    else
-      ss << "HTTP/1.1 404 NotFound\r\n\r\n";
-
-    pair.Client->WriteStr(ss.str());
+    std::string res = ProcessRequest(req);
+    pair.Client->WriteStr(res);
     break;
   }
 }
