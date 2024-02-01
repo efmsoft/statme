@@ -16,11 +16,16 @@ Generator::Generator(int code, const std::string& phrase, const Version& ver)
 
 void Generator::SetFormatter(FormatterPtr formatter)
 {
-  std::string mime = formatter->GetMimeType();
+  SetContentType(formatter->GetMimeType());
+  Formatter = formatter;
+}
+
+void Generator::SetContentType(const std::string& mime)
+{
+  Headers.DeleteHeader("Content-Type");
+
   if (!mime.empty())
     Headers.AddHeader("Content-Type", mime);
-
-  Formatter = formatter;
 }
 
 std::string Generator::Data() const

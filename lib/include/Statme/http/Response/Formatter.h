@@ -55,5 +55,18 @@ namespace HTTP
       std::string Run() override;
       std::string GetMimeType() override;
     };
+
+    struct StaticFormatter : public Formatter
+    {
+      std::string Mime;
+      const unsigned char* Data;
+      size_t Size;
+
+    public:
+      StaticFormatter(const char* mime, const unsigned char* data, size_t size);
+
+      std::string Run() override;
+      std::string GetMimeType() override;
+    };
   }
 }

@@ -22,6 +22,8 @@
 #include <string.h>
 #endif 
 
+#include <FaviconArray.hpp>
+
 using namespace Runtime;
 using namespace Syncme;
 
@@ -290,6 +292,16 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
 
     for (auto& t : Topics)
       f->AddTOCItem(t->Name, "/" + t->Name);
+  }
+  else if (url[0] == "favicon.ico")
+  {
+    ok.SetFormatter(
+      std::make_shared<StaticFormatter>(
+        "image/vnd.microsoft.icon"
+        , &Favicon[0]
+        , Favicon.size()
+      )
+    );
   }
   else
   {

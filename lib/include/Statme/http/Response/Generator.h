@@ -16,6 +16,8 @@ namespace HTTP
       Generator(int code, const std::string& phrase, const Version& ver = Version());
 
       void SetFormatter(FormatterPtr formatter);
+      void SetContentType(const std::string& mime);
+
       std::string Data() const;
     };
 
