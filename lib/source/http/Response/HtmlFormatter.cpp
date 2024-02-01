@@ -12,16 +12,19 @@ std::string HtmlFormatter::GetMimeType()
 std::string HtmlFormatter::Run()
 {
   std::stringstream ss;
+  ss << "<html><head><link rel=\"stylesheet\" href=\"/statme.css\"></head><body>";
 
   if (!TOC.empty())
   {
-    ss << "<p>";
+    ss << "<div class=\"toc\">";
+
     for (auto& t : TOC)
-    {
       ss << "&nbsp;<a href=\"" << t.Link << "\">" << t.Title << "</a>";
-    }
-    ss << "</p>\n";
+
+    ss << "</div>\n";
   }
+
+  ss << "<div class=\"content\">";
 
   if (!PRE.empty())
   {
@@ -32,6 +35,7 @@ std::string HtmlFormatter::Run()
     }
     ss << "</pre>\n";
   }
-
+  
+  ss << "</div></body></html>";
   return ss.str();
 }

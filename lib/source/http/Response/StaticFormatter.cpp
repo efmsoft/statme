@@ -14,7 +14,7 @@ std::string StaticFormatter::GetMimeType()
   return Mime;
 }
 
-std::string HtmlFormatter::Run()
+std::string StaticFormatter::Run()
 {
   return std::string((const char*)Data, Size);
 }

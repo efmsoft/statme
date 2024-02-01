@@ -1,0 +1,22 @@
+body {
+    padding: 0;
+    margin: 0;
+    background: #FFFDEA;
+    color: #000000;
+}
+
+a:visited, a:link {
+    color: #0000d0;
+    padding: 3px;
+}
+
+.toc {
+    font-size: 12pt;
+    background: #E9E3CB;
+    padding: 8px;
+    width: 100%;
+}
+
+.content {
+    padding: 8px;
+}

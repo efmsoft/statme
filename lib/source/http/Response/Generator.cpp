@@ -12,6 +12,10 @@ Generator::Generator(int code, const std::string& phrase, const Version& ver)
   Headers.Status = code;
   Headers.Reason = phrase;
   Headers.Protocol = ver;
+
+  Headers.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  Headers.AddHeader("Pragma", "no-cache");
+  Headers.AddHeader("Expires", "0");
 }
 
 void Generator::SetFormatter(FormatterPtr formatter)

@@ -23,6 +23,7 @@
 #endif 
 
 #include <FaviconArray.hpp>
+#include <StyleArray.hpp>
 
 using namespace Runtime;
 using namespace Syncme;
@@ -303,6 +304,16 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
       )
     );
   }
+  else if (url[0] == "statme.css")
+  {
+    ok.SetFormatter(
+      std::make_shared<StaticFormatter>(
+        "text/css"
+        , &Style[0]
+        , Style.size()
+      )
+    );
+  }
   else
   {
     auto uri = SplitUrl(req.Uri);
@@ -311,7 +322,7 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
     if (topic == nullptr)
       return NotFound.Data();
 
-    f->AddTOCItem("Home", "/");
+    f->AddTOCItem("home", "/");
     f->AddTOCItem(topic->Name, "/" + topic->Name);
 
     for (auto& s : topic->Subtopics)
