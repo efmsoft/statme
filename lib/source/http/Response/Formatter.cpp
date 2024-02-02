@@ -9,12 +9,14 @@ Formatter::~Formatter()
 }
 
 void Formatter::AddTOCItem(
-  const std::string& title
+  bool active
+  , const std::string& title
   , const std::string& link
   , const std::string& descr
 )
 {
-  TOCItem item;
+  TOCItem item{};
+  item.Active = active;
   item.Title = title;
   item.Link = link;
   item.Descr = descr;

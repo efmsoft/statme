@@ -19,8 +19,12 @@ std::string HtmlFormatter::Run()
     ss << "<div class=\"toc\">";
 
     for (auto& t : TOC)
-      ss << "&nbsp;<a href=\"" << t.Link << "\">" << t.Title << "</a>";
-
+    {
+      if (t.Active)
+        ss << "&nbsp;<span>" << t.Title << "</span>";
+      else
+        ss << "&nbsp;<a href=\"" << t.Link << "\">" << t.Title << "</a>";
+    } 
     ss << "</div>\n";
   }
 

@@ -3,18 +3,19 @@ body {
     margin: 0;
     background: #FFFDEA;
     color: #000000;
+    font-family: system-ui;
+    font-size: 10pt;
 }
 
 table {
     border: solid 1px black;
     border-collapse: collapse;
-    width: 100%;
 }
 
 th, td {
     text-align: left;
     border: solid 1px black;
-    padding: 6px;
+    padding: 8px;
 }
 
 a:visited, a:link {
@@ -27,6 +28,11 @@ a:visited, a:link {
     background: #E9E3CB;
     padding: 8px;
     width: 100%;
+}
+
+.toc span {
+    color: #0000d0;
+    font-weight:bold;
 }
 
 .content {

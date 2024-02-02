@@ -14,6 +14,7 @@ namespace HTTP
   {
     struct TOCItem
     {
+      bool Active;
       std::string Title;
       std::string Link;
       std::string Descr;
@@ -35,7 +36,8 @@ namespace HTTP
       STATMELNK virtual std::string GetMimeType() = 0;
       
       STATMELNK void AddTOCItem(
-        const std::string& title
+        bool active
+        , const std::string& title
         , const std::string& link
         , const std::string& descr = std::string()
       );

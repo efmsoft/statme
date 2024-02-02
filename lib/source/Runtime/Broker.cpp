@@ -203,7 +203,7 @@ void Broker::Stop()
 
 void Broker::Listener()
 {
-  SET_CUR_THREAD_NAME_EX("Counters listener");
+  SET_CUR_THREAD_NAME_EX("RT listener");
 
   ThreadsList threads;
   while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
@@ -291,8 +291,10 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
   {
     std::lock_guard lock(Lock);
 
+    f->AddTOCItem(true, "home", "/");
+
     for (auto& t : Topics)
-      f->AddTOCItem(t->Name, "/" + t->Name);
+      f->AddTOCItem(false, t->Name, "/" + t->Name);
   }
   else if (url[0] == "favicon.ico")
   {
@@ -322,14 +324,15 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
     if (topic == nullptr)
       return NotFound.Data();
 
-    f->AddTOCItem("home", "/");
-    f->AddTOCItem(topic->Name, "/" + topic->Name);
-
-    for (auto& s : topic->Subtopics)
-      f->AddTOCItem(s, "/" + topic->Name + "/" + s);
-    
     std::string arg1 = uri.size() > 1 ? uri[1] : "";
     std::string arg2 = uri.size() > 2 ? uri[2] : "";
+
+    f->AddTOCItem(false, "home", "/");
+    f->AddTOCItem(arg1.empty(), topic->Name, "/" + topic->Name);
+
+    for (auto& s : topic->Subtopics)
+      f->AddTOCItem(s == arg1, s, "/" + topic->Name + "/" + s);
+    
     if (!topic->Print(*f, arg1, arg2))
       return InternalServerError.Data();
   }
@@ -338,6 +341,8 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
 
 void Broker::ConnectionWorker(int socket)
 {
+  SET_CUR_THREAD_NAME_EX("RT connection");
+
   Logme::ID ch = CH;
   SocketPair pair(ch, StopEvent, Config);
 
@@ -366,6 +371,5 @@ void Broker::ConnectionWorker(int socket)
 
     std::string res = ProcessRequest(req);
     pair.Client->WriteStr(res);
-    break;
   }
 }
