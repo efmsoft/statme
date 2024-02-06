@@ -27,6 +27,7 @@ set(STATME_INCLUDE_DIRS
   ${LOGME_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}
   ${SYNCME_INCLUDE_DIR}
+  ${JSONCPP_INCLUDE_DIR}
 )
 
 set(STATME_WIN32_DEFS
@@ -59,7 +60,7 @@ if(NOT ${USE_STATME_ONLY})
   if(WIN32)
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
-  target_link_libraries(statmed LINK_PRIVATE syncme ${LOGME_LIBRARIES} ${OPENSSL_LIBRARIES})
+  target_link_libraries(statmed LINK_PRIVATE syncme ${LOGME_LIBRARIES} ${OPENSSL_LIBRARIES} ${JSONCPP_LIBRARIES})
 
   if(WIN32)
     target_link_libraries(statmed LINK_PUBLIC WS2_32.Lib) 
