@@ -14,6 +14,10 @@ namespace HTTP
     {
       bool Header;
       StringArray Columns;
+
+      Row() : Header(false)
+      {
+      }
     };
 
     typedef std::shared_ptr<Row> RowPtr;
