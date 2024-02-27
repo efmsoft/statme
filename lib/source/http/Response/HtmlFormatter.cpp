@@ -4,6 +4,19 @@
 
 using namespace HTTP::Response;
 
+namespace
+{
+  void ReplaceAll(std::string& str, const std::string& from, const std::string& to)
+  {
+    size_t start = 0;
+    while ((start = str.find(from, start)) != std::string::npos)
+    {
+      str.replace(start, from.length(), to);
+      start += to.length();
+    }
+  }
+}
+
 std::string HtmlFormatter::GetMimeType()
 {
   return "text/html";
@@ -38,6 +51,9 @@ std::string HtmlFormatter::Run()
       ss << "<tr>\n";
       for (auto& c : r->Columns)
       {
+        ReplaceAll(c, "\n", "<br>");
+        ReplaceAll(c, "\r", "");
+
         if (r->Header)
           ss << "<th>" << c << "</th>";
         else
