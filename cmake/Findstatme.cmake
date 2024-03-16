@@ -15,6 +15,5 @@
 get_filename_component(STATME_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE) 
 
 set(STATME_INCLUDE_DIR ${STATME_ROOT}/lib/include)
-set(STATME_LIBRARIES statme)
 
 add_subdirectory(${STATME_ROOT}/lib)
