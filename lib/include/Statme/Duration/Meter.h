@@ -72,9 +72,9 @@ namespace Duration
   Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, __FUNCTION__)
 
 #define DURATION_METER_WITH_NAME(x) \
-  static const char* _tag = __FUNCTION__ "_" x; \
-  static DurationCounter _dc(_tag); \
-  Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, _tag)
+  static const std::string _tag = std::string(__FUNCTION__) + '_' + x; \
+  static DurationCounter _dc(_tag.c_str()); \
+  Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, _tag.c_str())
 
 #define TREAD_DURATION_METER() \
   static DurationCounter _dc(__FUNCTION__); \
