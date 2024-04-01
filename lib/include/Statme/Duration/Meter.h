@@ -13,6 +13,9 @@ namespace Duration
 {
   class Meter
   {
+    static std::mutex ThreadMapLock;
+    static std::map<uint64_t, Meter*> ThreadMap;
+
     CritSection Lock;
     ThreadDataMap Map;
 
@@ -20,6 +23,8 @@ namespace Duration
     STATMELNK Meter();
 
     STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name);
+    STATMELNK static CalculatorPtr StartThreadMeasurement(DurationCounter& dc, const char* name);
+
     STATMELNK void PrintResults(const Logme::ID& ch, const std::string& title);
 
     struct Handle
@@ -28,6 +33,28 @@ namespace Duration
     };
     STATMELNK Handle* StartMeasurement2(DurationCounter& dc, const char* name);
 
+    STATMELNK static Meter* SetThreadObject(Meter* o);
+    STATMELNK static Meter* GetThreadObject();
+
+    struct ThreadObjectMapGuard
+    {
+      Meter* Prev;
+      Meter* Object;
+
+      ThreadObjectMapGuard(Meter* o)
+        : Prev(nullptr)
+        , Object(o)
+      {
+        if (Object)
+          Prev = Duration::Meter::SetThreadObject(Object);
+      }
+
+      ~ThreadObjectMapGuard()
+      {
+        if (Object)
+          Duration::Meter::SetThreadObject(Prev);
+      }
+    };
   private:
     friend Calculator;
     void StopMeasurement(uint64_t id, uint64_t duration, MeasurementPtr parent);
@@ -37,9 +64,21 @@ namespace Duration
   };
 }
 
+#define THREAD_DURATION_METER_OBJECT(meter) \
+  Duration::Meter::ThreadObjectMapGuard _tomGuard(meter)
+
 #define DURATION_METER() \
   static DurationCounter _dc(__FUNCTION__); \
   Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, __FUNCTION__)
+
+#define DURATION_METER_WITH_NAME(x) \
+  static const char* _tag = __FUNCTION__ "_" x; \
+  static DurationCounter _dc(_tag); \
+  Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, _tag)
+
+#define TREAD_DURATION_METER() \
+  static DurationCounter _dc(__FUNCTION__); \
+  Duration::CalculatorPtr _dcalc = Duration::Meter::StartThreadMeasurement(_dc, __FUNCTION__)
 
 #define DURATION_METER_RESULTS(t) \
   DurationMeter.PrintResults(CH, t)

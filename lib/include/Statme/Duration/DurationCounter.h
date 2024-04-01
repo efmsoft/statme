@@ -1,6 +1,6 @@
 #pragma once
 
-#include <atomic>
+#include <mutex>
 #include <stdint.h>
 
 #include <Logme/Logme.h>
@@ -22,10 +22,11 @@ struct STATMELNK DurationCounterValue
 
 class DurationCounter
 {
-  static std::atomic<DurationCounter*> Head;
+  static std::mutex HeadLock;
+  static DurationCounter* Head;
 
   const char* Name;
-  std::atomic<DurationCounter*> Next;
+  DurationCounter* Next;
 
   uint64_t Min;
   bool MinSet;
@@ -37,6 +38,7 @@ class DurationCounter
 
 public:
   STATMELNK DurationCounter(const char* name);
+  STATMELNK ~DurationCounter();
 
   STATMELNK void Reset();
   STATMELNK void Add(uint64_t duration);

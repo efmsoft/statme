@@ -6,8 +6,52 @@
 using namespace Syncme;
 using namespace Duration;
 
+std::mutex Meter::ThreadMapLock;
+std::map<uint64_t, Meter*> Meter::ThreadMap;
+
 Meter::Meter()
 {
+}
+
+Meter* Meter::SetThreadObject(Meter* o)
+{
+  Meter* prev = nullptr;
+  auto id = GetCurrentThreadId();
+
+  std::lock_guard<std::mutex> guard(ThreadMapLock);
+
+  auto it = ThreadMap.find(id);
+  if (it != ThreadMap.end())
+    prev = it->second;
+
+  if (o)
+    ThreadMap[id] = o;
+  else if (it != ThreadMap.end())
+    ThreadMap.erase(it);
+
+  return prev;
+}
+
+Meter* Meter::GetThreadObject()
+{
+  auto id = GetCurrentThreadId();
+
+  std::lock_guard<std::mutex> guard(ThreadMapLock);
+  
+  auto it = ThreadMap.find(id);
+  if (it == ThreadMap.end())
+    return nullptr;
+
+  return it->second;
+}
+
+CalculatorPtr Meter::StartThreadMeasurement(DurationCounter& dc, const char* name)
+{
+  Meter* o = GetThreadObject();
+  if (o == nullptr)
+    return CalculatorPtr();
+
+  return o->StartMeasurement(dc, name);
 }
 
 Meter::Handle* Meter::StartMeasurement2(DurationCounter& dc, const char* name)

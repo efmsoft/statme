@@ -7,7 +7,8 @@
 
 using namespace Syncme;
 
-std::atomic<DurationCounter*> DurationCounter::Head;
+std::mutex DurationCounter::HeadLock;
+DurationCounter* DurationCounter::Head = nullptr;
 
 DurationCounterValue::DurationCounterValue()
 {
@@ -20,7 +21,34 @@ DurationCounter::DurationCounter(const char* name)
   , Lock(0)
 {
   Reset();
-  Next = std::atomic_exchange(&Head, this);
+
+  std::lock_guard<std::mutex> guard(HeadLock);
+  Next = Head;
+  Head = this;
+}
+
+DurationCounter::~DurationCounter()
+{
+  std::lock_guard<std::mutex> guard(HeadLock);
+
+  if (Head = this)
+    Head = Next;
+  else
+  {
+    bool found = false;
+    for (DurationCounter* p = Head; p; p = p->Next)
+    {
+      if (p->Next = this)
+      {
+        p->Next = Next;
+        found = true;
+        break;
+      }
+    }
+
+    (void)found;
+    assert(found);
+  }
 }
 
 void DurationCounter::Reset()
@@ -101,6 +129,8 @@ const char* DurationCounter::GetName() const
 void DurationCounter::PrintStatistics(const Logme::ID& channel)
 {
   std::vector<DurationCounterValue> arr;
+  std::lock_guard<std::mutex> guard(HeadLock);
+
   for (DurationCounter* p = Head; p; p = p->Next)
   {
     const char* n = p->GetName();
