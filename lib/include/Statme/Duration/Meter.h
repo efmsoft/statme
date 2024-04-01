@@ -76,11 +76,11 @@ namespace Duration
   static DurationCounter _dc(_tag.c_str()); \
   Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, _tag.c_str())
 
-#define TREAD_DURATION_METER() \
+#define THREAD_DURATION_METER() \
   static DurationCounter _dc(__FUNCTION__); \
   Duration::CalculatorPtr _dcalc = Duration::Meter::StartThreadMeasurement(_dc, __FUNCTION__)
 
-#define THERAD_DURATION_METER_WITH_NAME(x) \
+#define THREAD_DURATION_METER_WITH_NAME(x) \
   static const std::string _tag = std::string(__FUNCTION__) + '_' + x; \
   static DurationCounter _dc(_tag.c_str()); \
   Duration::CalculatorPtr _dcalc = Duration::Meter::StartThreadMeasurement(_dc, _tag.c_str())
