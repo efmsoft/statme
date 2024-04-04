@@ -43,7 +43,7 @@ namespace Runtime
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
 
-    STATMELNK bool Start(int port);
+    STATMELNK bool Start(const std::string& ip, int port);
     STATMELNK void Stop();
 
   private:

@@ -107,7 +107,7 @@ void Broker::CloseSocket()
   }
 }
 
-bool Broker::Start(int port)
+bool Broker::Start(const std::string& ip, int port)
 {
   struct addrinfo hints {};
   hints.ai_family = AF_INET;
@@ -118,7 +118,7 @@ bool Broker::Start(int port)
   std::string port_str = std::to_string(port);
 
   struct addrinfo* addr = nullptr;
-  int rc = getaddrinfo("127.0.0.1", port_str.c_str(), &hints, &addr);
+  int rc = getaddrinfo(ip.c_str(), port_str.c_str(), &hints, &addr);
   if (rc)
   {
     LogosE("getaddrinfo() failed");
