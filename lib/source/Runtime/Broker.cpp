@@ -47,6 +47,9 @@ Broker::~Broker()
 
 BrokerPtr Broker::GetInstance()
 {
+  if (Instance == nullptr)
+    return BrokerPtr();
+
   return Instance->shared_from_this();
 }
 
