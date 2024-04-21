@@ -251,7 +251,7 @@ StringArrayPtr Headers::GetHeader(
     return StringArrayPtr();
 
   StringArrayPtr arr = std::make_shared<StringArray>();
-  for (auto& v : (*it)->Values)
+  for (std::string v : (*it)->Values)
   {
     if (splitter)
     {
