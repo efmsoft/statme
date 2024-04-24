@@ -36,7 +36,7 @@ namespace HTTP
       bool LowerCase;
 
     public:
-      STATMELNK Headers(bool lowerCase = false);
+      STATMELNK Headers(bool lowerCase);
       STATMELNK virtual ~Headers();
 
       STATMELNK virtual HEADER_ERROR Parse(const StreamData& data);
@@ -98,7 +98,7 @@ namespace HTTP
       Version Protocol;
 
     public:
-      STATMELNK ReqHeaders();
+      STATMELNK ReqHeaders(bool lowerCase = false);
 
       STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
       STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;
@@ -116,7 +116,7 @@ namespace HTTP
       std::string Reason;
 
     public:
-      STATMELNK ResHeaders();
+      STATMELNK ResHeaders(bool lowerCase = false);
 
       STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
       STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;

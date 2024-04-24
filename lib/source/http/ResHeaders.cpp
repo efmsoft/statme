@@ -6,8 +6,9 @@
 
 using namespace HTTP::Header;
 
-ResHeaders::ResHeaders()
-  : Protocol(0, 9)
+ResHeaders::ResHeaders(bool lowerCase)
+  : Headers(lowerCase)
+  , Protocol(0, 9)
   , Status(0)
 {
 }
