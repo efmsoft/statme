@@ -7,7 +7,7 @@ namespace HTTP
 {
   namespace Response
   {
-    class Generator
+    struct Generator
     {
       HTTP::Header::ResHeaders Headers;
       FormatterPtr Formatter;
@@ -34,6 +34,15 @@ namespace HTTP
       NOT_FOUND()
         : Generator(404, "Not Found", Version())
       {
+      }
+    };
+
+    struct REDIRECT : public Generator
+    {
+      REDIRECT(const std::string& location)
+        : Generator(301, "Moved Permanently", Version())
+      {
+        Headers.AddHeader("Location", location);
       }
     };
 

@@ -24,8 +24,13 @@ std::string HtmlFormatter::GetMimeType()
 
 std::string HtmlFormatter::Run()
 {
+  if (Rel.empty())
+    Rel = "./";
+
   std::stringstream ss;
-  ss << "<html><head><link rel=\"stylesheet\" href=\"/statme.css\"></head><body>";
+  ss << "<html><head><link rel=\"stylesheet\" href=\"" << Rel << "statme.css\">";
+  ss << "<link rel=\"icon\" type=\"image/x-icon\" href=\"" << Rel << "favicon.ico\">";
+  ss << "</head><body>";
 
   if (!TOC.empty())
   {

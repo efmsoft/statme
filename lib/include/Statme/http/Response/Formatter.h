@@ -28,6 +28,7 @@ namespace HTTP
       TOCItemArray TOC;
       StringArray PRE;
       TableArray Tables;
+      std::string Rel;
 
     public:
       STATMELNK virtual ~Formatter();

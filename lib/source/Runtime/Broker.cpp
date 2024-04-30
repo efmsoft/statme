@@ -282,22 +282,28 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
 {
   using namespace HTTP::Response;
 
+  StringArray url = SplitUrl(req.Uri);
+  if (url.empty())
+  {
+    REDIRECT redirect("./home");
+    return redirect.Data();
+  }
+
   OK ok;
-  FormatterPtr f = AcceptsHtml(req) ? 
+  FormatterPtr f = AcceptsHtml(req) ?
     std::make_shared<HtmlFormatter>()
     : (FormatterPtr)std::make_shared<TextFormatter>();
 
   ok.SetFormatter(f);
-  
-  StringArray url = SplitUrl(req.Uri);
-  if (url.empty())
+
+  if (url[0] == "home")
   {
     std::lock_guard lock(Lock);
 
-    f->AddTOCItem(true, "home", "/");
+    f->AddTOCItem(true, "home", ".");
 
     for (auto& t : Topics)
-      f->AddTOCItem(false, t->Name, "/" + t->Name);
+      f->AddTOCItem(false, t->Name, "./" + t->Name);
   }
   else if (url[0] == "favicon.ico")
   {
@@ -329,12 +335,15 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
 
     std::string arg1 = uri.size() > 1 ? uri[1] : "";
     std::string arg2 = uri.size() > 2 ? uri[2] : "";
+    
+    std::string rel = arg1.empty() ? "./" : "../";
+    f->Rel = rel;
 
-    f->AddTOCItem(false, "home", "/");
-    f->AddTOCItem(arg1.empty(), topic->Name, "/" + topic->Name);
+    f->AddTOCItem(false, "home", rel + "home");
+    f->AddTOCItem(arg1.empty(), topic->Name, rel + topic->Name);
 
     for (auto& s : topic->Subtopics)
-      f->AddTOCItem(s == arg1, s, "/" + topic->Name + "/" + s);
+      f->AddTOCItem(s == arg1, s, rel + topic->Name + "/" + s);
     
     if (!topic->Print(*f, arg1, arg2))
       return InternalServerError.Data();
