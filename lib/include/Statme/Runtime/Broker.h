@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <mutex>
+#include <stdint.h>
+#include <vector>
 
 #include <Syncme/Config/Config.h>
 #include <Syncme/Sync.h>
@@ -24,6 +26,10 @@ namespace Runtime
     std::mutex Lock;
     TopicList Topics;
 
+    std::string Login;
+    std::string Pass;
+    std::vector<uint8_t> Key;
+
     Syncme::ThreadPool::Pool& Pool;
     HEvent& StopEvent;
     Syncme::ConfigPtr Config;
@@ -43,7 +49,12 @@ namespace Runtime
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
 
-    STATMELNK bool Start(const std::string& ip, int port);
+    STATMELNK bool Start(
+      const std::string& ip
+      , int port
+      , const std::string& login
+      , const std::string& pass
+    );
     STATMELNK void Stop();
 
   private:
@@ -52,11 +63,20 @@ namespace Runtime
     void ConnectionWorker(int socket);
 
     bool AcceptsHtml(const HTTP::Header::ReqHeaders& req) const;
-    std::string ProcessRequest(const HTTP::Header::ReqHeaders& req);
+    std::string ProcessRequest(
+      const HTTP::Header::ReqHeaders& req
+      , const std::string& peerIP
+    );
+    std::string CreateToken(const std::string& peerIP) const;
+    bool VerifyToken(const std::string& token, const std::string& peerIP) const;
+    bool VerifyAuthorization(const std::string& auth) const;
+    std::string GetToken(const HTTP::Header::ReqHeaders& req);
 
     typedef std::vector<std::string> StringArray;
     StringArray SplitUrl(const std::string& url);
     TopicPtr GetTopic(const StringArray& uri);
+
+    void GenerateKey();
   };
 }
 

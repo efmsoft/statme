@@ -46,6 +46,14 @@ namespace HTTP
       }
     };
 
+    struct UNAUTHORIZED : public Generator
+    {
+      UNAUTHORIZED()
+        : Generator(401, "Unauthorized", Version())
+      {
+      }
+    };
+
     struct INTERNAL_SERVER_ERROR : public Generator
     {
       INTERNAL_SERVER_ERROR() 

@@ -31,13 +31,16 @@ using namespace Syncme;
 Broker* Broker::Instance = nullptr;
 
 Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
-  : Pool(pool)
+  : Key(32)
+  , Pool(pool)
   , StopEvent(stopEvent)
   , Socket(-1)
   , ListenerThread(nullptr)
   , Exiting(false)
 {
   Instance = this;
+
+  GenerateKey();
 }
 
 Broker::~Broker()
@@ -110,8 +113,16 @@ void Broker::CloseSocket()
   }
 }
 
-bool Broker::Start(const std::string& ip, int port)
+bool Broker::Start(
+  const std::string& ip
+  , int port
+  , const std::string& login
+  , const std::string& pass
+)
 {
+  Login = login;
+  Pass = pass;
+
   struct addrinfo hints {};
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
@@ -278,14 +289,71 @@ TopicPtr Broker::GetTopic(const StringArray& uri)
   return TopicPtr();
 }
 
-std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
+std::string Broker::GetToken(const HTTP::Header::ReqHeaders& req)
+{
+  auto h = req.GetHeader("Cookie", false, "; ");
+  if (h == nullptr)
+    return std::string();
+
+  for (std::string v : *h)
+  {
+    char* ctx = nullptr;
+    char* p0 = strtok_r(&v[0], "=", &ctx);
+    char* p1 = strtok_r(nullptr, " ", &ctx);
+    if (p0 == nullptr || p1 == nullptr)
+      continue;
+
+    std::string k(p0);
+    std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+    if (k != "token")
+      continue;
+
+    return p1;
+  }
+
+  return std::string();
+}
+
+std::string Broker::ProcessRequest(
+  const HTTP::Header::ReqHeaders& req
+  , const std::string& peerIP
+)
 {
   using namespace HTTP::Response;
+  
+  std::string token;
+  if (!Login.empty() || !Pass.empty())
+  {
+    token = GetToken(req);
+    if (token.empty() || !VerifyToken(token, peerIP))
+    {
+      token.clear();
+
+      std::string auth = req.GetFirstValue("Authorization", false);
+      if (auth.empty() || !VerifyAuthorization(auth))
+      {
+        UNAUTHORIZED unauthorized;
+        unauthorized.Headers.SetHeader("WWW-Authenticate", "Basic realm=\"Authorization Required\"");
+        unauthorized.Headers.SetHeader("Content-Length", "0");
+        return unauthorized.Data();
+      }
+
+      if (token.empty())
+        token = CreateToken(peerIP);
+    }
+  }
+
+  std::string cookie;
+  if (!token.empty())
+    cookie = "token=" + token + "; Max-Age=" + std::to_string(24LL * 60 * 60);
 
   StringArray url = SplitUrl(req.Uri);
   if (url.empty())
   {
     REDIRECT redirect("./home");
+    if (!token.empty())
+      redirect.Headers.SetHeader("Set-Cookie", cookie);
+
     return redirect.Data();
   }
 
@@ -348,6 +416,10 @@ std::string Broker::ProcessRequest(const HTTP::Header::ReqHeaders& req)
     if (!topic->Print(*f, arg1, arg2))
       return InternalServerError.Data();
   }
+
+  if (!token.empty())
+    ok.Headers.SetHeader("Set-Cookie", cookie);
+  
   return ok.Data();
 }
 
@@ -361,6 +433,7 @@ void Broker::ConnectionWorker(int socket)
   pair.Client = pair.CreateBIOSocket();
   pair.Client->Attach(socket);
   pair.Client->Configure();
+  pair.Client->InitPeer();
 
   while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
   {
@@ -381,7 +454,7 @@ void Broker::ConnectionWorker(int socket)
     if (req.Method != "GET" || req.Protocol.Major != 1)
       break;
 
-    std::string res = ProcessRequest(req);
+    std::string res = ProcessRequest(req, pair.Client->Peer.IP);
     pair.Client->WriteStr(res);
   }
 }
