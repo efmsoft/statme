@@ -86,10 +86,11 @@ bool Broker::VerifyAuthorization(const std::string& auth) const
 
   char* login = strtok_r(&av[0], ":", &ctx);
   char* pass = strtok_r(nullptr, ":", &ctx);
-  if (login == nullptr || pass == nullptr)
+  if (login == nullptr || login != Login)
     return false;
 
-  if (login != Login || pass != Pass)
+  std::string pwd(pass ? pass : "");
+  if (pwd != Pass)
     return false;
 
   return true;
