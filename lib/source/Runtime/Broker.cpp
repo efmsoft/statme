@@ -376,12 +376,18 @@ std::string Broker::ProcessRequest(
 
   if (url[0] == "home")
   {
-    std::lock_guard lock(Lock);
+    StringArray arr;
+    arr.push_back("home");
+    TopicPtr topic = GetTopic(arr);
 
+    std::lock_guard lock(Lock);
     f->AddTOCItem(true, "home", ".");
 
     for (auto& t : Topics)
       f->AddTOCItem(false, t->Name, "./" + t->Name);
+
+    if (topic)
+      topic->Print(*f, "", "");
   }
   else if (url[0] == "favicon.ico")
   {
