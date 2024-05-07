@@ -347,6 +347,16 @@ std::string Broker::ProcessRequest(
   if (!token.empty())
     cookie = "token=" + token + "; Max-Age=" + std::to_string(24LL * 60 * 60);
 
+  if (req.Uri.size() > 1 && req.Uri.ends_with('/'))
+  {
+    REDIRECT redirect(req.Uri.substr(0, req.Uri.size() - 1));
+
+    if (!token.empty())
+      redirect.Headers.SetHeader("Set-Cookie", cookie);
+
+    return redirect.Data();
+  }
+
   StringArray url = SplitUrl(req.Uri);
   if (url.empty())
   {
