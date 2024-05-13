@@ -384,7 +384,10 @@ std::string Broker::ProcessRequest(
     f->AddTOCItem(true, "home", ".");
 
     for (auto& t : Topics)
-      f->AddTOCItem(false, t->Name, "./" + t->Name);
+    {
+      if (t != topic)
+        f->AddTOCItem(false, t->Name, "./" + t->Name);
+    }
 
     if (topic)
       topic->Print(*f, "", "");
