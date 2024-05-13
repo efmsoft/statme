@@ -183,7 +183,7 @@ private:
     for (size_t c{}; c < row.size(); ++c)
     {
       Out.WriteScreen(row[c], pos);
-      pos.X += ColumnWidths[c] + 2;
+      pos.X += ColumnWidths[c] + 3;
     }
     Out.SetCurPos({startPos.X, startPos.Y + RowHeights[rowIndex]});
   }
