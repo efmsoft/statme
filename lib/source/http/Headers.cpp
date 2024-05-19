@@ -29,6 +29,11 @@ bool Headers::Empty() const
   return ReqRes.empty();
 }
 
+void Headers::Clear()
+{
+  Header.clear();
+}
+
 const char* Headers::sstrtok(
   char* str,
   const char* delimiters,

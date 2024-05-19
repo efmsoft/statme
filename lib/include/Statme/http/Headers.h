@@ -43,6 +43,7 @@ namespace HTTP
       STATMELNK virtual HEADER_ERROR Parse(const char* data, size_t length);
       
       STATMELNK bool Empty() const;
+      STATMELNK void Clear();
 
       STATMELNK std::string ToString(
         const char* indent = ""
