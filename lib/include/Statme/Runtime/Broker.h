@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <vector>
 
+#include <openssl/ssl.h>
+
 #include <Syncme/Config/Config.h>
 #include <Syncme/Sync.h>
 #include <Syncme/ThreadPool/Pool.h>
@@ -35,9 +37,15 @@ namespace Runtime
     Syncme::ConfigPtr Config;
 
     int Socket;
+    int SocketSSL;
     HEvent ListenerThread;
+    HEvent ListenerThreadSSL;
     HEvent WorkerThread;
+    HEvent WorkerThreadSSL;
     bool Exiting;
+
+    X509* SSLCert;
+    EVP_PKEY* SSLKey;
 
   public:
     STATMELNK Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent);
@@ -48,19 +56,18 @@ namespace Runtime
     STATMELNK void UnregisterTopic(Cookie);
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
+    STATMELNK void SetLoginData(const std::string& login, const std::string& pass);
 
-    STATMELNK bool Start(
-      const std::string& ip
-      , int port
-      , const std::string& login
-      , const std::string& pass
-    );
+    STATMELNK bool Start(const std::string& ip, int port);
+    STATMELNK bool StartSSL(const std::string& ip, int port, X509* cert, EVP_PKEY* key);
+
     STATMELNK void Stop();
 
   private:
-    void Listener();
+    void Listener(int socket);
     void CloseSocket();
-    void ConnectionWorker(int socket);
+    void CloseSocketSSL();
+    void ConnectionWorker(int socket, int server_socket);
 
     bool AcceptsHtml(const HTTP::Header::ReqHeaders& req) const;
     std::string ProcessRequest(
@@ -75,6 +82,8 @@ namespace Runtime
     typedef std::vector<std::string> StringArray;
     StringArray SplitUrl(const std::string& url);
     TopicPtr GetTopic(const StringArray& uri);
+
+    int PrepareSocket(const std::string& ip, int port);
 
     void GenerateKey();
   };
