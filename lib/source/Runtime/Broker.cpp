@@ -8,6 +8,7 @@
 #include <Syncme/SetThreadName.h>
 #include <Syncme/Sockets/API.h>
 #include <Syncme/Sockets/SocketPair.h>
+#include <Syncme/Sockets/SSLHelpers.h>
 #include <Syncme/ThreadPool/ThreadList.h>
 #include <Syncme/TickCount.h>
 
@@ -35,8 +36,14 @@ Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   , Pool(pool)
   , StopEvent(stopEvent)
   , Socket(-1)
+  , SocketSSL(-1)
   , ListenerThread(nullptr)
+  , ListenerThreadSSL(nullptr)
+  , WorkerThread(nullptr)
+  , WorkerThreadSSL(nullptr)
   , Exiting(false)
+  , SSLCert(0)
+  , SSLKey(0)
 {
   Instance = this;
 
@@ -113,16 +120,25 @@ void Broker::CloseSocket()
   }
 }
 
-bool Broker::Start(
-  const std::string& ip
-  , int port
-  , const std::string& login
-  , const std::string& pass
-)
+void Broker::CloseSocketSSL()
+{
+  if (SocketSSL != -1)
+  {
+    shutdown(SocketSSL, SD_RECEIVE);
+
+    closesocket(SocketSSL);
+    SocketSSL = -1;
+  }
+}
+
+void Broker::SetLoginData(const std::string& login, const std::string& pass)
 {
   Login = login;
   Pass = pass;
+}
 
+int Broker::PrepareSocket(const std::string& ip, int port)
+{
   struct addrinfo hints {};
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
@@ -136,37 +152,52 @@ bool Broker::Start(
   if (rc)
   {
     LogosE("getaddrinfo() failed");
-    return false;
+    return -1;
   }
 
   struct sockaddr_in* sockAddr_ipv4 = nullptr;
   sockAddr_ipv4 = (struct sockaddr_in*)addr->ai_addr;
   LogI(
-    "Counters server IPv4 Address : %s:%i"
+    "RT server IPv4 Address : %s:%i"
     , inet_ntoa(sockAddr_ipv4->sin_addr)
     , ntohs(sockAddr_ipv4->sin_port)
   );
 
-  Socket = (int)socket(AF_INET, SOCK_STREAM, 0);
-  if (Socket == -1)
+  int sock = (int)socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == -1)
   {
     LogosE("WSASocket() failed");
 
     freeaddrinfo(addr);
-    return false;
+    return -1;
   }
 
-  rc = bind(Socket, addr->ai_addr, (int)addr->ai_addrlen);
+  rc = bind(sock, addr->ai_addr, (int)addr->ai_addrlen);
   if (rc)
   {
     LogosE("bind() failed");
 
-    CloseSocket();
+    shutdown(sock, SD_RECEIVE);
+
+    closesocket(sock);
+
     freeaddrinfo(addr);
-    return false;
+    return -1;
   }
 
   freeaddrinfo(addr);
+
+  return sock;
+}
+
+bool Broker::Start(const std::string& ip /* 127.0.0.1 */, int port)
+{
+  Socket = PrepareSocket(ip, port);
+  if (Socket == -1)
+  {
+    LogosE("WSASocket() failed");
+    return false;
+  }
 
   if (listen(Socket, SOMAXCONN) == -1)
   {
@@ -176,7 +207,7 @@ bool Broker::Start(
     return false;
   }
 
-  ListenerThread = Pool.Run(std::bind(&Broker::Listener, this));
+  ListenerThread = Pool.Run(std::bind(&Broker::Listener, this, Socket));
   if (ListenerThread == nullptr)
   {
     LogE("ThreadPool::Run() failed");
@@ -185,6 +216,46 @@ bool Broker::Start(
     return false;
   }
 
+  LogI("http server started, socket %d", Socket);
+  return true;
+}
+
+bool Broker::StartSSL(const std::string& ip /* 0.0.0.0 */, int port, X509* cert, EVP_PKEY* key)
+{
+  SSLCert = cert;
+  SSLKey = key;
+
+  if (!SSLCert || !SSLKey)
+  {
+    LogosE("Incorrect arguments");
+    return false;
+  }
+
+  SocketSSL = PrepareSocket(ip, port);
+  if (SocketSSL == -1)
+  {
+    LogosE("WSASocket() failed");
+    return false;
+  }
+
+  if (listen(SocketSSL, SOMAXCONN) == -1)
+  {
+    LogosE("listen() failed");
+
+    CloseSocketSSL();
+    return false;
+  }
+
+  ListenerThreadSSL = Pool.Run(std::bind(&Broker::Listener, this, SocketSSL));
+  if (ListenerThreadSSL == nullptr)
+  {
+    LogE("ThreadPool::Run() failed");
+
+    CloseSocketSSL();
+    return false;
+  }
+
+  LogI("https server started, socket %d", SocketSSL);
   return true;
 }
 
@@ -197,6 +268,7 @@ void Broker::Stop()
   }
 
   CloseSocket();
+  CloseSocketSSL();
 
   if (WorkerThread)
   {
@@ -213,16 +285,37 @@ void Broker::Stop()
 
     CloseHandle(ListenerThread);
   }
+
+  if (WorkerThreadSSL)
+  {
+    auto rc = WaitForSingleObject(WorkerThreadSSL, FOREVER);
+    assert(rc == WAIT_RESULT::OBJECT_0);
+
+    CloseHandle(WorkerThreadSSL);
+  }
+
+  if (ListenerThreadSSL)
+  {
+    auto rc = WaitForSingleObject(ListenerThreadSSL, FOREVER);
+    assert(rc == WAIT_RESULT::OBJECT_0);
+
+    CloseHandle(ListenerThreadSSL);
+  }
+
 }
 
-void Broker::Listener()
+void Broker::Listener(int sock)
 {
-  SET_CUR_THREAD_NAME_EX("RT listener");
+  const char* tName = "RT listener";
+  if (sock != Socket)
+    tName = "RT SSL listener";
+
+  SET_CUR_THREAD_NAME_EX(tName);
 
   ThreadsList threads;
   while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
   {
-    int accept_sock = (int)accept(Socket, nullptr, nullptr);
+    int accept_sock = (int)accept(sock, nullptr, nullptr);
     if (accept_sock == -1)
     {
       if (!Exiting)
@@ -231,7 +324,7 @@ void Broker::Listener()
       break;
     }
 
-    HEvent h = Pool.Run(std::bind(&Broker::ConnectionWorker, this, accept_sock));
+    HEvent h = Pool.Run(std::bind(&Broker::ConnectionWorker, this, accept_sock, sock));
     if (h == nullptr)
     {
       LogE("ThreadPool::Run() failed");
@@ -442,15 +535,126 @@ std::string Broker::ProcessRequest(
   return ok.Data();
 }
 
-void Broker::ConnectionWorker(int socket)
+static SSL_CTX* CreateClientContext(X509* cert, EVP_PKEY* key)
 {
-  SET_CUR_THREAD_NAME_EX("RT connection");
+  SSL_CTX* ctx = SSL_CTX_new((SSL_METHOD*)TLS_server_method());
+  if (ctx == nullptr)
+  {
+    LogE("SSL_CTX_new() failed, %s", GetBioError().c_str());
+    return 0;
+  }
+
+  int64_t options = SSL_CTX_get_options(ctx);
+  SSL_CTX_set_options(
+    ctx
+    , options 
+    | SSL_OP_ALL
+    | SSL_OP_IGNORE_UNEXPECTED_EOF 
+    | SSL_OP_LEGACY_SERVER_CONNECT
+  );
+
+  int mode = SSL_CTX_get_mode(ctx);
+  SSL_CTX_set_mode(ctx, mode | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
+    /* Set the key and cert */
+  if (SSL_CTX_use_certificate(ctx, cert) != 1)
+  {
+    LogE("SSL_CTX_use_certificate() failed, %s", GetBioError().c_str());
+    SSL_CTX_free(ctx);
+    return 0;
+  }
+
+  if (SSL_CTX_use_PrivateKey(ctx, key) != 1)
+  {
+    LogE("SSL_CTX_use_PrivateKey() failed, %s", GetBioError().c_str());
+    SSL_CTX_free(ctx);
+    return 0;
+  }
+
+  if (SSL_CTX_check_private_key(ctx) != 1)
+  {
+    LogE("SSL_check_private_key() failed, %s", GetBioError().c_str());
+    SSL_CTX_free(ctx);
+    return 0;
+  }
+
+  return ctx;
+}
+
+static SSL* CreateClientSSL(SSL_CTX* ctx, int fd)
+{
+  SSL* ssl = SSL_new(ctx);
+  if (ssl == nullptr)
+  {
+    LogE("SSL_new() failed, %s", GetBioError().c_str());
+    return 0;
+  }
+
+  if (SSL_set_fd(ssl, fd) != 1)
+  {
+    LogE("SSL_set_fd() failed, %s", GetBioError().c_str());
+    SSL_free(ssl);
+    return 0;
+  }
+
+  if (SSL_accept(ssl) != 1)
+  {
+    LogE("SSL_accept() failed, %s", GetBioError().c_str());
+    SSL_free(ssl);
+    return 0;
+  }
+
+  return ssl;
+}
+
+void Broker::ConnectionWorker(int socket, int server_socket)
+{
+  const char* tName = "RT connection";
+  if (server_socket != Socket)
+    tName = "RT SSL connection";
+
+  SET_CUR_THREAD_NAME_EX(tName);
+
+  SSL_CTX* clientContext = 0;
+  SSL* clientSSL = 0;
 
   Logme::ID ch = CH;
   SocketPair pair(ch, StopEvent, Config);
 
-  pair.Client = pair.CreateBIOSocket();
-  pair.Client->Attach(socket);
+  if (server_socket != Socket)
+  {
+    clientContext = CreateClientContext(SSLCert, SSLKey);
+    if (!clientContext)
+    {
+      LogE("%s: failed to create client context (%d, %d)", tName, socket, server_socket);
+      return;
+    }
+    clientSSL = CreateClientSSL(clientContext, socket);
+    if (!clientSSL)
+    {
+      LogE("%s: failed to create client SSL (%d, %d)", tName, socket, server_socket);
+      SSL_CTX_free(clientContext);
+      return;
+    }
+
+    pair.Client = pair.CreateSSLSocket(clientSSL);
+  }
+  else
+  {
+    pair.Client = pair.CreateBIOSocket();
+  }
+
+  if (!pair.Client->Attach(socket))
+  {
+    LogE("%s: failed to attach socket (%d, %d)", tName, socket, server_socket);
+    if (clientSSL)
+      SSL_free(clientSSL);
+
+    if (clientContext)
+      SSL_CTX_free(clientContext);
+    return;
+  }
+
   pair.Client->Configure();
   pair.Client->InitPeer();
 
@@ -476,4 +680,11 @@ void Broker::ConnectionWorker(int socket)
     std::string res = ProcessRequest(req, pair.Client->Peer.IP);
     pair.Client->WriteStr(res);
   }
+
+  if (clientSSL)
+    SSL_free(clientSSL);
+
+  if (clientContext)
+    SSL_CTX_free(clientContext);
+
 }
