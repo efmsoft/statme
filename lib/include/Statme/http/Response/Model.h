@@ -1,6 +1,8 @@
+#include "Model/Button.h"
 #include "Model/Drawable.h"
 #include "Model/Page.h"
 #include "Model/Paragraph.h"
+#include "Model/Raw.h"
 #include "Model/Screen.h"
 #include "Model/Table.h"
 #include "Model/Tree.h"
