@@ -20,6 +20,8 @@ enum class HEADER_ERROR
   ZERO_CHAR = -2,
   TOO_LARGE = -3,
   INVALID = -4,
+  INVALID_CHAR = -5,
+  EMPTY_KEY = -6,
 };
 
 // Returns offset of next character after 

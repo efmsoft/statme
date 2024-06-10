@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 
 #include <Statme/http/Headers.h>
@@ -12,21 +13,25 @@ ReqHeaders::ReqHeaders(bool lowerCase)
 {
 }
 
-HEADER_ERROR ReqHeaders::Parse(const StreamData& data)
+HEADER_ERROR ReqHeaders::Parse(const StreamData& data, Verification type)
 {
-  return Parse(data, data.size());
+  return Parse(data, data.size(), type);
 }
 
-HEADER_ERROR ReqHeaders::Parse(const char* data, size_t length)
+HEADER_ERROR ReqHeaders::Parse(
+  const char* data
+  , size_t length
+  , Verification type
+)
 {
-  HEADER_ERROR e = Headers::Parse(data, length);
+  HEADER_ERROR e = Headers::Parse(data, length, type);
   if (e != HEADER_ERROR::NONE)
     return e;
 
-  return ParseReqLine();
+  return ParseReqLine(type);
 }
 
-HEADER_ERROR ReqHeaders::ParseReqLine()
+HEADER_ERROR ReqHeaders::ParseReqLine(Verification type)
 {
   char* line = (char*)alloca(ReqRes.size() + 1);
   strcpy(line, ReqRes.c_str());
@@ -41,6 +46,36 @@ HEADER_ERROR ReqHeaders::ParseReqLine()
     return HEADER_ERROR::INVALID;
 
   Protocol = Version::Parse(protocol);
+
+  if (type == Verification::Strict)
+  {
+    std::string method(Method);
+    std::transform(method.begin(), method.end(), method.begin(), ::toupper);
+
+    if (method != "GET"
+      && method != "HEAD"
+      && method != "POST"
+      && method != "PUT"
+      && method != "DELETE"
+      && method != "CONNECT"
+      && method != "OPTIONS"
+      && method != "TRACE"
+      && method != "PATCH"
+    )
+    {
+      return HEADER_ERROR::INVALID;
+    }
+
+    if (!(Protocol.Major == 0 && Protocol.Minor == 9)
+      && !(Protocol.Major == 1 && Protocol.Minor == 0)
+      && !(Protocol.Major == 1 && Protocol.Minor == 1)
+      && !(Protocol.Major == 2 && Protocol.Minor == 0)
+      && !(Protocol.Major == 3 && Protocol.Minor == 0)
+    )
+    {
+      return HEADER_ERROR::INVALID;
+    }
+  }
 
   return HEADER_ERROR::NONE;
 }

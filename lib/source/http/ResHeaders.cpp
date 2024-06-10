@@ -13,21 +13,25 @@ ResHeaders::ResHeaders(bool lowerCase)
 {
 }
 
-HEADER_ERROR ResHeaders::Parse(const StreamData& data)
+HEADER_ERROR ResHeaders::Parse(const StreamData& data, Verification type)
 {
-  return Parse(data, data.size());
+  return Parse(data, data.size(), type);
 }
 
-HEADER_ERROR ResHeaders::Parse(const char* data, size_t length)
+HEADER_ERROR ResHeaders::Parse(
+  const char* data
+  , size_t length
+  , Verification type
+)
 {
-  HEADER_ERROR e = Headers::Parse(data, length);
+  HEADER_ERROR e = Headers::Parse(data, length, type);
   if (e != HEADER_ERROR::NONE)
     return e;
 
-  return ParseResLine();
+  return ParseResLine(type);
 }
 
-HEADER_ERROR ResHeaders::ParseResLine()
+HEADER_ERROR ResHeaders::ParseResLine(Verification type)
 {
   char* line = (char*)alloca(ReqRes.size() + 1);
   strcpy(line, ReqRes.c_str());
@@ -46,6 +50,22 @@ HEADER_ERROR ResHeaders::ParseResLine()
   Status = (int)strtoll(status.c_str(), &e, 10);
   if (*e != '\0')
     return HEADER_ERROR::INVALID;
+
+  if (type == Verification::Strict)
+  {
+    if (Status < 100)
+      return HEADER_ERROR::INVALID;
+
+    if (!(Protocol.Major == 0 && Protocol.Minor == 9)
+      && !(Protocol.Major == 1 && Protocol.Minor == 0)
+      && !(Protocol.Major == 1 && Protocol.Minor == 1)
+      && !(Protocol.Major == 2 && Protocol.Minor == 0)
+      && !(Protocol.Major == 3 && Protocol.Minor == 0)
+      )
+    {
+      return HEADER_ERROR::INVALID;
+    }
+  }
 
   return HEADER_ERROR::NONE;
 }

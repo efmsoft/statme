@@ -23,6 +23,12 @@ namespace HTTP
       StringArray Values;
     };
 
+    enum class Verification
+    {
+      NontStrict,
+      Strict
+    };
+
     typedef std::shared_ptr<Field> FieldPtr;
     typedef std::list<FieldPtr> FieldList;
 
@@ -39,8 +45,8 @@ namespace HTTP
       STATMELNK Headers(bool lowerCase);
       STATMELNK virtual ~Headers();
 
-      STATMELNK virtual HEADER_ERROR Parse(const StreamData& data);
-      STATMELNK virtual HEADER_ERROR Parse(const char* data, size_t length);
+      STATMELNK virtual HEADER_ERROR Parse(const StreamData& data, Verification type);
+      STATMELNK virtual HEADER_ERROR Parse(const char* data, size_t length, Verification type);
       
       STATMELNK bool Empty() const;
       STATMELNK void Clear();
@@ -88,6 +94,10 @@ namespace HTTP
       STATMELNK static bool Printable(const std::string& str);
       STATMELNK static size_t CalcPrintable(const std::string& str);
 
+      STATMELNK static bool ValidKey(const std::string& key);
+      STATMELNK static bool ValidValue(const std::string& val);
+      STATMELNK static bool ValidHeaderBuf(const std::string& buf);
+
     private:
       static void PushValue(StringArrayPtr arr, const std::string& value, bool lowrcase);
     };
@@ -101,13 +111,13 @@ namespace HTTP
     public:
       STATMELNK ReqHeaders(bool lowerCase = false);
 
-      STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
-      STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;
+      STATMELNK HEADER_ERROR Parse(const StreamData& data, Verification type) override;
+      STATMELNK HEADER_ERROR Parse(const char* data, size_t length, Verification type) override;
 
       STATMELNK bool IsHeadRequest() const;
 
     private:
-      HEADER_ERROR ParseReqLine();
+      HEADER_ERROR ParseReqLine(Verification type);
     };
 
     struct ResHeaders : public Headers
@@ -119,11 +129,11 @@ namespace HTTP
     public:
       STATMELNK ResHeaders(bool lowerCase = false);
 
-      STATMELNK HEADER_ERROR Parse(const StreamData& data) override;
-      STATMELNK HEADER_ERROR Parse(const char* data, size_t length) override;
+      STATMELNK HEADER_ERROR Parse(const StreamData& data, Verification type) override;
+      STATMELNK HEADER_ERROR Parse(const char* data, size_t length, Verification type) override;
 
     private:
-      HEADER_ERROR ParseResLine();
+      HEADER_ERROR ParseResLine(Verification type);
     };
   }
 }

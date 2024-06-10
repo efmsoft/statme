@@ -14,6 +14,8 @@
 
 using namespace HTTP::Header;
 
+static const char* SPEC = "_ :;.,\\/\"'?!(){}[]@<>=-+*#$&`|~^%";
+
 Headers::Headers(bool lowerCase)
   : Size(0)
   , LowerCase(lowerCase)
@@ -44,9 +46,9 @@ const char* Headers::sstrtok(
   return ret ? ret : "";
 }
 
-HEADER_ERROR Headers::Parse(const StreamData& data)
+HEADER_ERROR Headers::Parse(const StreamData& data, Verification type)
 {
-  return Parse(data, data.size());
+  return Parse(data, data.size(), type);
 }
 
 bool Headers::Printable(const std::string& str)
@@ -72,7 +74,67 @@ size_t Headers::CalcPrintable(const std::string& str)
   return n;
 }
 
-HEADER_ERROR Headers::Parse(const char* data, size_t length)
+bool Headers::ValidKey(const std::string& key)
+{
+  // Key:
+  // Alphanumeric characters : a - z, A - Z, and 0 - 9
+  // The following special characters : - and _
+  for (auto& c : key)
+  {
+    if (isalnum(c) || c == '-' || c == '_')
+      continue;
+
+    return false;
+  }
+
+  return true;
+}
+
+bool Headers::ValidValue(const std::string& val)
+{
+  // Value:
+  // The value of the HTTP request header you want to set can only contain:
+  // Alphanumeric characters : a - z, A - Z, and 0 - 9
+  // The following special characters : _:; ., \ / "'?!(){}[]@<>=-+*#$&`|~^%
+  for (auto& c : val)
+  {
+    if (isalnum(c) || c == '-' || c == '_')
+      continue;
+
+    if (strchr(SPEC, c))
+      continue;
+
+    return false;
+  }
+
+  return true;
+}
+
+bool Headers::ValidHeaderBuf(const std::string& buf)
+{
+  // Allow all characters as in Value plus CR LF
+  for (auto& c : buf)
+  {
+    if (isalnum(c) || c == '-' || c == '_')
+      continue;
+
+    if (strchr(SPEC, c))
+      continue;
+
+    if (c == '\r' || c == '\n')
+      continue;
+
+    return false;
+  }
+
+  return true;
+}
+
+HEADER_ERROR Headers::Parse(
+  const char* data
+  , size_t length
+  , Verification type
+)
 {
   ReqRes.clear();
   Header.clear();
@@ -111,6 +173,15 @@ HEADER_ERROR Headers::Parse(const char* data, size_t length)
 
     val.erase(0, val.find_first_not_of(" "));
     val.erase(val.find_last_not_of(" ") + 1);
+
+    if (type == Verification::Strict)
+    {
+      if (name.empty())
+        return HEADER_ERROR::EMPTY_KEY;
+
+      if (!ValidKey(name) || !ValidValue(val))
+        return HEADER_ERROR::INVALID_CHAR;
+    }
 
     if (name.empty())
       continue;

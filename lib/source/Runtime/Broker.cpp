@@ -671,7 +671,8 @@ void Broker::ConnectionWorker(int socket, int server_socket)
       break;
 
     HTTP::Header::ReqHeaders req;
-    if (req.Parse(rdata.c_str(), rdata.size()) != HEADER_ERROR::NONE)
+    auto vtype = HTTP::Header::Verification::NontStrict;
+    if (req.Parse(rdata.c_str(), rdata.size(), vtype) != HEADER_ERROR::NONE)
       break;
 
     if (req.Method != "GET" || req.Protocol.Major != 1)
