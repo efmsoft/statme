@@ -81,7 +81,7 @@ bool Headers::ValidKey(const std::string& key)
   // The following special characters : - and _
   for (auto& c : key)
   {
-    if (isalnum(c) || c == '-' || c == '_')
+    if (isalnum(uint8_t(c)) || c == '-' || c == '_')
       continue;
 
     return false;
