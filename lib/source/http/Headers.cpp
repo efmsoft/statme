@@ -115,7 +115,7 @@ bool Headers::ValidHeaderBuf(const std::string& buf)
   // Allow all characters as in Value plus CR LF
   for (auto& c : buf)
   {
-    if (isalnum(c) || c == '-' || c == '_')
+    if (isalnum(uint8_t(c)) || c == '-' || c == '_')
       continue;
 
     if (strchr(SPEC, c))
