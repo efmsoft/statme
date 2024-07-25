@@ -148,7 +148,8 @@ public:
     for (size_t rowIndex{}; rowIndex < Cells.size(); ++rowIndex)
     {
       PrintRow(rowIndex);
-      PrintBorderLine();
+      if (rowIndex == 0 || rowIndex == Cells.size() - 1)
+        PrintBorderLine();
     }
   }
 

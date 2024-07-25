@@ -3,6 +3,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <Statme/http/Find2CRLF.h>
@@ -115,6 +116,8 @@ namespace HTTP
       STATMELNK HEADER_ERROR Parse(const char* data, size_t length, Verification type) override;
 
       STATMELNK bool IsHeadRequest() const;
+
+      STATMELNK static HEADER_ERROR TryParse(std::string_view data);
 
     private:
       HEADER_ERROR ParseReqLine(Verification type);
