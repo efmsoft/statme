@@ -58,3 +58,4 @@ find_package(jsoncpp MODULE)
 
 enable_testing()
 add_subdirectory(lib ../out/Static)
+add_subdirectory(tests)
