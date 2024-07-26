@@ -48,7 +48,7 @@ if(NOT ${USE_STATMED_ONLY})
 endif()
 
 if(NOT ${USE_STATME_ONLY})
-  add_library(statmed SHARED ${SOURCES} ${HEADERS}) 
+  add_library(statmed SHARED ${SOURCES} ${HEADERS} ${STATME_VERSION_RC}) 
   target_include_directories(statmed PUBLIC ${STATME_INCLUDE_DIRS})
   target_compile_definitions(statmed PRIVATE _STATME_DLL_BUILD_)
 
