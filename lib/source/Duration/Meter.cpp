@@ -32,9 +32,9 @@ Meter* Meter::SetThreadObject(Meter* o)
   return prev;
 }
 
-Meter* Meter::GetThreadObject()
+Meter* Meter::GetThreadObject(uint64_t* pthreadid)
 {
-  auto id = GetCurrentThreadId();
+  auto id = pthreadid ? *pthreadid : GetCurrentThreadId();
 
   std::lock_guard<std::mutex> guard(ThreadMapLock);
   
@@ -45,9 +45,9 @@ Meter* Meter::GetThreadObject()
   return it->second;
 }
 
-CalculatorPtr Meter::StartThreadMeasurement(DurationCounter& dc, const char* name)
+CalculatorPtr Meter::StartThreadMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid)
 {
-  Meter* o = GetThreadObject();
+  Meter* o = GetThreadObject(pthreadid);
   if (o == nullptr)
     return CalculatorPtr();
 
@@ -61,9 +61,13 @@ Meter::Handle* Meter::StartMeasurement2(DurationCounter& dc, const char* name)
   return h;
 }
 
-CalculatorPtr Meter::StartMeasurement(DurationCounter& dc, const char* name)
+CalculatorPtr Meter::StartMeasurement(
+  DurationCounter& dc
+  , const char* name
+  , uint64_t* pthreadid
+)
 {
-  auto id = GetCurrentThreadId();
+  auto id = pthreadid ? *pthreadid : GetCurrentThreadId();
   auto lock = Lock.Lock();
 
   MeasurementPtr parent;
@@ -101,7 +105,7 @@ CalculatorPtr Meter::StartMeasurement(DurationCounter& dc, const char* name)
     }
   }
 
-  return std::make_shared<Calculator>(this, parent);
+  return std::make_shared<Calculator>(this, parent, &id);
 }
 
 void Meter::StopMeasurement(
@@ -154,7 +158,12 @@ void Meter::AppendData(
   str += "\n";
   str += align;
   str += m->Name;
-  str += "(): ";
+
+  // Do not add () for pseudo function metrics
+  if (*m->Name != '[')
+    str += "()";
+  
+  str +=": ";
   str += std::to_string(m->Duration);
 
   for (auto& c : m->Child)

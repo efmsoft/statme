@@ -22,8 +22,8 @@ namespace Duration
   public:
     STATMELNK Meter();
 
-    STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name);
-    STATMELNK static CalculatorPtr StartThreadMeasurement(DurationCounter& dc, const char* name);
+    STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);
+    STATMELNK static CalculatorPtr StartThreadMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);
 
     STATMELNK void PrintResults(const Logme::ID& ch, const std::string& title);
 
@@ -34,7 +34,7 @@ namespace Duration
     STATMELNK Handle* StartMeasurement2(DurationCounter& dc, const char* name);
 
     STATMELNK static Meter* SetThreadObject(Meter* o);
-    STATMELNK static Meter* GetThreadObject();
+    STATMELNK static Meter* GetThreadObject(uint64_t* pthreadid = nullptr);
 
     struct ThreadObjectMapGuard
     {

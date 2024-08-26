@@ -18,7 +18,7 @@ namespace Duration
     uint64_t ThreadID;
 
   public:
-    STATMELNK Calculator(Meter* meter, MeasurementPtr parent);
+    STATMELNK Calculator(Meter* meter, MeasurementPtr parent, uint64_t* pthread_id = nullptr);
     STATMELNK ~Calculator();
   };
 

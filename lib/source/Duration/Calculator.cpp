@@ -10,11 +10,12 @@ using namespace Duration;
 Calculator::Calculator(
   Meter* meter
   , MeasurementPtr parent
+  , uint64_t* pthread_id
 )
   : Owner(meter)
   , Parent(parent)
   , Start(GetTimeInMillisec())
-  , ThreadID(GetCurrentThreadId())
+  , ThreadID(pthread_id ? *pthread_id : GetCurrentThreadId())
 {
 }
 
