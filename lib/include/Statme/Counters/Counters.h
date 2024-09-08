@@ -14,10 +14,10 @@
 #define CNTR_PROP_LOGFILE "logfile"
 #define CNTR_PROP_LOGCH "logch"
 #define CNTR_PROP_THREADID "thread"
-#define CNTR_PROP_UUID "id"                 // Unique identifier of request
+#define CNTR_PROP_UUID "request-id"                 // Unique identifier of request
 #define CNTR_PROP_INDEX "index"             // Index of request within keep-alive http/https connection
 #define CNTR_PROP_CLIENT "client"
-#define CNTR_PROP_PARENT "parent"
+#define CNTR_PROP_PARENT "parent-id"
 
 #define CNTR_CATEGORY_PROTOCOL "protocol"
 #define CNTR_CATEGORY_SCHEME "scheme"

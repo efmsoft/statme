@@ -26,7 +26,7 @@ namespace HTTP
 
     enum class Verification
     {
-      NontStrict,
+      NotStrict,
       Strict
     };
 
