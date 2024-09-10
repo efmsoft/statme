@@ -18,6 +18,7 @@
 #define CNTR_PROP_INDEX "index"             // Index of request within keep-alive http/https connection
 #define CNTR_PROP_CLIENT "client"
 #define CNTR_PROP_PARENT "parent-id"
+#define CNTR_PROP_MODE "mode"
 
 #define CNTR_CATEGORY_PROTOCOL "protocol"
 #define CNTR_CATEGORY_SCHEME "scheme"

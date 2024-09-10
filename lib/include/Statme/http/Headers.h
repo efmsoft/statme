@@ -48,7 +48,8 @@ namespace HTTP
 
       STATMELNK virtual HEADER_ERROR Parse(const StreamData& data, Verification type);
       STATMELNK virtual HEADER_ERROR Parse(const char* data, size_t length, Verification type);
-      
+      STATMELNK std::string Reparse();
+
       STATMELNK bool Empty() const;
       STATMELNK void Clear();
 

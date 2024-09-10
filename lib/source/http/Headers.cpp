@@ -130,6 +130,17 @@ bool Headers::ValidHeaderBuf(const std::string& buf)
   return true;
 }
 
+std::string Headers::Reparse()
+{
+  std::string h = ToString();
+
+  auto e = Parse(h.c_str(), h.size(), Verification::NotStrict);
+  if (e != HEADER_ERROR::NONE)
+    return std::string();
+
+  return h;
+}
+
 HEADER_ERROR Headers::Parse(
   const char* data
   , size_t length
