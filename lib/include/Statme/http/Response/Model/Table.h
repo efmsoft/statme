@@ -15,7 +15,7 @@ namespace Model
     virtual IRow& AddCell(const std::shared_ptr<IDrawable>& cell) = 0;
     IRow& AddCell(const std::string& text)
     {
-      return AddCell(IParagraph::Create(text, {.Uniform = false}));
+      return AddCell(IParagraph::Create(text, {.Uniform = true}));
     }
   };
 
