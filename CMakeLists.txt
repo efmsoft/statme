@@ -59,7 +59,6 @@ find_package(logme MODULE)
 find_package(OpenSSL REQUIRED) 
 find_package(syncme MODULE)
 find_package(jsoncpp MODULE)
-find_package(libhv CONFIG REQUIRED)
 
 enable_testing()
 add_subdirectory(lib ${CMAKE_SOURCE_DIR}/bin/Static)
