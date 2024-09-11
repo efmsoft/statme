@@ -1,12 +1,29 @@
-macro(FindAllStat)
+macro(Findallstat)
   set(folder ${CMAKE_CURRENT_SOURCE_DIR})
 
   while(TRUE)
-    message("Processing ${folder}")
+    message("Processing ${folder}, project root ${CMAKE_SOURCE_DIR}")
 
-    if(EXISTS ${folder}/allstat AND EXISTS ${folder}/allstat/AllStat)
+    if(EXISTS ${folder}/allstat/AllStat/include/AllStat/AllStat.h)
       message("Found allstat library: ${folder}/allstat")
       set(ALLSTAT_ROOT ${folder}/allstat)
+      break()
+    endif()
+
+    if(EXISTS ${folder}/bin/allstat/AllStat/include/AllStat/AllStat.h)
+      message("Found allstat library: ${folder}/bin/allstat")
+      set(ALLSTAT_ROOT ${folder}/bin/allstat)
+      break()
+    endif()
+
+    if(EXISTS ${folder}/Modules/allstat/AllStat/include/AllStat/AllStat.h)
+      message("Found allstat library: ${folder}/Modules/allstat")
+      set(ALLSTAT_ROOT ${folder}/Modules/allstat)
+      break()
+    endif()
+
+    # do not leave project
+    if(folder STREQUAL ${CMAKE_SOURCE_DIR})
       break()
     endif()
 
@@ -24,49 +41,44 @@ macro(FindAllStat)
   endwhile()
 endmacro()
 
-set(USE_ALLSTAT OFF)
 set(ALLSTAT_ROOT "")
+Findallstat()
 
-if(ENABLE_ALLSTAT)
+if(ALLSTAT_ROOT STREQUAL "")
   if(NOT FORCE_FETCH)
-    FindAllStat()
+    message(FATAL_ERROR "Internal error:FORCE_FETCH disabled but allstat is not found.")
   endif()
-
-  if(ALLSTAT_ROOT STREQUAL "")
-    set(ALLSTAT_ROOT "${CMAKE_CURRENT_LIST_DIR}/out/allstat")
-    if(NOT EXISTS ALLSTAT_ROOT)
-      include(FetchContent)
-      FetchContent_Declare(allstat
-        GIT_REPOSITORY "https://github.com/efmsoft/allstat.git"
-        GIT_TAG "master"
-        SOURCE_SUBDIR AllStat
-        SOURCE_DIR "${ALLSTAT_ROOT}"
-      )
-      FetchContent_MakeAvailable(allstat)
-    endif()
-  endif()
-endif()
-
-if(NOT ALLSTAT_ROOT STREQUAL "")
-  set(ALLSTAT_INCLUDE_DIR "${ALLSTAT_ROOT}/AllStat/include")
-  set(USE_ALLSTAT ON)
-
-  add_compile_definitions(USE_ALLSTAT)
-  include_directories(syncme PUBLIC
-    ${ALLSTAT_INCLUDE_DIR}
+  set(ALLSTAT_ROOT "${CMAKE_SOURCE_DIR}/bin/allstat")
+  include(FetchContent)
+  FetchContent_Declare(allstat
+    GIT_REPOSITORY "https://github.com/efmsoft/allstat.git"
+    GIT_TAG "master"
+    SOURCE_DIR "${ALLSTAT_ROOT}"
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
   )
-
-  if(TARGET allstat)
-    set_target_properties(allstat PROPERTIES FOLDER "Dependencies")
+  FetchContent_GetProperties(allstat)
+  if(NOT allstat_POPULATED)
+    FetchContent_Populate(allstat)
   endif()
-
-  message("Enable allstat usage")
-  message("ALLSTAT_INCLUDE_DIR=${ALLSTAT_INCLUDE_DIR}")
-else()
-  set(USE_ALLSTAT OFF)
-  message("Disable allstat usage")
 endif()
 
-if(USE_ALLSTAT)
-  set(ALLSTAT_LIB allstat)
+if(ALLSTAT_ROOT STREQUAL "")
+  message(FATAL_ERROR "Cannot find allstat root.")
 endif()
+
+include(${ALLSTAT_ROOT}/cmake/Findallstat.cmake)
+
+set(ALLSTAT_INCLUDE_DIR "${ALLSTAT_ROOT}/AllStat/include")
+
+add_compile_definitions(USE_ALLSTAT)
+include_directories(${ALLSTAT_INCLUDE_DIR})
+
+if(TARGET allstat)
+  set_target_properties(allstat PROPERTIES FOLDER "Dependencies")
+endif()
+
+message("Enable allstat usage")
+message("ALLSTAT_INCLUDE_DIR=${ALLSTAT_INCLUDE_DIR}")
+
+set(ALLSTAT_LIBRARIES allstat)

@@ -31,3 +31,8 @@ include(GoogleTest)
 gtest_discover_tests(${PROJECT_NAME} DISCOVERY_MODE PRE_TEST)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Tests")
+
+set_target_properties(gmock PROPERTIES FOLDER "Tests/gtest")
+set_target_properties(gmock_main PROPERTIES FOLDER "Tests/gtest")
+set_target_properties(gtest PROPERTIES FOLDER "Tests/gtest")
+set_target_properties(gtest_main PROPERTIES FOLDER "Tests/gtest")

@@ -70,8 +70,8 @@ include(${SYNCME_ROOT}/cmake/Findsyncme.cmake)
 
 include_directories(${SYNCME_INCLUDE_DIR})
 
-if(TARGET syncme)
-  set_target_properties(syncme PROPERTIES FOLDER "Dependencies")
+if(TARGET syncmed)
+  set_target_properties(syncmed PROPERTIES FOLDER "Dependencies")
 endif()
 
 message("Enable syncme usage")

@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) 
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
@@ -46,16 +48,19 @@ set(ENABLE_ALLSTAT ON)
 set(ENABLE_LOGME ON)
 
 add_compile_definitions(LOGME_INRELEASE)
-add_compile_definitions(_LOGME_STATIC_BUILD_)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+set(USE_SYNCME_SHARED ON)
+set(USE_LOGME_SHARED ON)
 
 find_package(allstat MODULE)
 find_package(logme MODULE)
 find_package(OpenSSL REQUIRED) 
 find_package(syncme MODULE)
 find_package(jsoncpp MODULE)
+find_package(libhv CONFIG REQUIRED)
 
 enable_testing()
-add_subdirectory(lib ../out/Static)
+add_subdirectory(lib ${CMAKE_SOURCE_DIR}/bin/Static)
 add_subdirectory(tests)

@@ -397,3 +397,15 @@ std::string Manager::GrabStat(uint64_t timestamp)
 
   return Json::FastWriter().write(root);
 }
+
+void Manager::OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& req)
+{
+}
+
+void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& msg)
+{
+}
+
+void Manager::OnClose(const WebSocketChannelPtr& channel)
+{
+}

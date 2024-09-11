@@ -84,7 +84,7 @@ include_directories(jsoncpp_static PUBLIC
 )
 
 if(TARGET jsoncpp_static)
-  set_target_properties(jsoncpp_static PROPERTIES FOLDER "Lib")
+  set_target_properties(jsoncpp_static PROPERTIES FOLDER "Dependencies")
 endif()
 
 message("Findjsoncpp.cmake: JSONCPP_ROOT=${JSONCPP_ROOT}")

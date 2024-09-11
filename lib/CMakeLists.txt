@@ -61,7 +61,14 @@ if(NOT ${USE_STATME_ONLY})
   if(WIN32)
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
-  target_link_libraries(statmed LINK_PRIVATE ${SYNCME_LIBRARIES} ${LOGME_LIBRARIES} ${OPENSSL_LIBRARIES} ${JSONCPP_LIBRARIES})
+  
+  target_link_libraries(statmed LINK_PRIVATE 
+    hv
+    syncmed
+    logmed 
+    ${OPENSSL_LIBRARIES} 
+    ${JSONCPP_LIBRARIES}
+  )
 
   if(WIN32)
     target_link_libraries(statmed LINK_PUBLIC WS2_32.Lib) 

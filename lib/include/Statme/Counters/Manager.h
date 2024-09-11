@@ -10,12 +10,16 @@
 #include <Statme/Counters/Counter.h>
 #include <Statme/Macros.h>
 
+#include <Statme/Counters/WebSocketServer.h>
+
 namespace Counters
 {
   class Manager;
   typedef std::shared_ptr<Manager> ManagerPtr;
 
-  class Manager : public std::enable_shared_from_this<Manager>
+  class Manager 
+    : public std::enable_shared_from_this<Manager>
+    , Counters::WebsocketServer
   {
     static Manager* Instance;
 
@@ -61,6 +65,11 @@ namespace Counters
     STATMELNK bool Start(int port);
     STATMELNK void Stop();
     STATMELNK void SetDirty();
+
+  protected:
+    void OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& req) override;
+    void OnMessage(const WebSocketChannelPtr& channel, const std::string& msg) override;
+    void OnClose(const WebSocketChannelPtr& channel) override;
 
   private:
     void Listener();
