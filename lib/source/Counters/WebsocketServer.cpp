@@ -1,4 +1,4 @@
-#include <hv/WebSocketServer.h>
+#include <hv/WebsocketServer.h>
 #include <hv/HttpMessage.h>
 
 #include <Statme/Counters/WebsocketServer.h>

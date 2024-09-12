@@ -10,7 +10,7 @@
 #include <Statme/Counters/Counter.h>
 #include <Statme/Macros.h>
 
-#include <Statme/Counters/WebSocketServer.h>
+#include <Statme/Counters/WebsocketServer.h>
 
 namespace Counters
 {
