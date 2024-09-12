@@ -96,7 +96,7 @@ ScreenImpl::Line& ScreenImpl::EnsureLineWidth(Position p)
   EnsureScreenHeight(p.Y);
   auto& line = Screen[p.Y];
   if (line.size() <= p.X)
-    line.resize(p.X + 1);
+    line.resize(p.X + 1, Model::Char{.C = ' '});
   return line;
 }
 
