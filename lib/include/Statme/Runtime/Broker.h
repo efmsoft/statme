@@ -90,7 +90,7 @@ namespace Runtime
 }
 
 #define RUNTIME_TOPIC_REGISTER(n, p, s) \
-  Runtime::Broker::GetInstance()->RegisterTopic(n, p, s)
+  (Runtime::Broker::GetInstance() ? Runtime::Broker::GetInstance()->RegisterTopic(n, p, s) : nullptr)
 
 #define RUNTIME_TOPIC_UNREGISTER(c) \
-  Runtime::Broker::GetInstance()->UnregisterTopic(c)
+  { if (Runtime::Broker::GetInstance() && c) { Runtime::Broker::GetInstance()->UnregisterTopic(c); } }
