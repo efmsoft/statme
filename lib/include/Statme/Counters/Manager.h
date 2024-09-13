@@ -35,11 +35,6 @@ namespace Counters
     HEvent& StopEvent;
     Syncme::ConfigPtr Config;
 
-    int Socket;
-    HEvent ListenerThread;
-    HEvent WorkerThread;
-    bool Exiting;
-
   public:
     STATMELNK Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent);
     STATMELNK ~Manager();
@@ -70,12 +65,6 @@ namespace Counters
     void OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& req) override;
     void OnMessage(const WebSocketChannelPtr& channel, const std::string& msg) override;
     void OnClose(const WebSocketChannelPtr& channel) override;
-
-  private:
-    void Listener();
-    void Worker();
-    void CloseSocket();
-    void ConnectionWorker(int socket);
 
     std::string GrabStat(uint64_t timestamp);
   };

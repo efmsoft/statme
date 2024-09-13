@@ -15,6 +15,8 @@
 #include <Statme/Counters/Holder.h>
 #include <Statme/Counters/Manager.h>
 
+#include "WebSocketServerEx.h"
+
 using namespace Syncme;
 using namespace Counters;
 
@@ -26,10 +28,6 @@ Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   , WorkerTimeout(FOREVER)
   , Pool(pool)
   , StopEvent(stopEvent)
-  , Socket(-1)
-  , ListenerThread(nullptr)
-  , WorkerThread(nullptr)
-  , Exiting(false)
 {
   Instance = this;
 }
@@ -37,12 +35,6 @@ Manager::Manager(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
 Manager::~Manager()
 {
   Deleted.clear();
-
-  assert(ListenerThread == nullptr);
-  assert(WorkerThread == nullptr);
-  assert(Counters.empty());
-  
-  CloseSocket();
   CloseHandle(DeletedEvent);
 }
 
@@ -67,19 +59,6 @@ void Manager::SetSocketConfig(ConfigPtr config)
 void Manager::SetDirty()
 {
   Modified = GetTimeInMillisec();
-}
-
-void Manager::CloseSocket()
-{
-  Exiting = true;
-
-  if (Socket != -1)
-  {
-    shutdown(Socket, SD_RECEIVE);
-
-    closesocket(Socket);
-    Socket = -1;
-  }
 }
 
 CounterPtr Manager::AddCounter(
@@ -116,9 +95,6 @@ void Manager::DeleteCounter(CounterPtr counter)
       Counters.erase(it);
       counter->Deleted = GetTimeInMillisec();
 
-      if (!Exiting)
-        Deleted.push_back(counter);
-
       SetEvent(DeletedEvent);
       break;
     }
@@ -127,246 +103,12 @@ void Manager::DeleteCounter(CounterPtr counter)
 
 bool Manager::Start(int port)
 {
-  struct addrinfo hints{};
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  hints.ai_flags = AI_PASSIVE;
-
-  std::string port_str = std::to_string(port);
-
-  struct addrinfo* addr = nullptr;
-  int rc = getaddrinfo("127.0.0.1", port_str.c_str(), &hints, &addr);
-  if (rc)
-  {
-    LogosE("getaddrinfo() failed");
-    return false;
-  }
-
-  struct sockaddr_in* sockAddr_ipv4 = nullptr;
-  sockAddr_ipv4 = (struct sockaddr_in*)addr->ai_addr;
-  LogI(
-    "Counters server IPv4 Address : %s:%i"
-    , inet_ntoa(sockAddr_ipv4->sin_addr)
-    , ntohs(sockAddr_ipv4->sin_port)
-  );
-
-  Socket = (int)socket(AF_INET, SOCK_STREAM, 0);
-  if (Socket == -1)
-  {
-    LogosE("WSASocket() failed");
-
-    freeaddrinfo(addr);
-    return false;
-  }
-
-  rc = bind(Socket, addr->ai_addr, (int)addr->ai_addrlen);
-  if (rc)
-  {
-    LogosE("bind() failed");
-
-    CloseSocket();
-    freeaddrinfo(addr);
-    return false;
-  }
-
-  freeaddrinfo(addr);
-
-  if (listen(Socket, SOMAXCONN) == -1)
-  {
-    LogosE("listen() failed");
-
-    CloseSocket();
-    return false;
-  }
-
-  ListenerThread = Pool.Run(std::bind(&Manager::Listener, this));
-  if (ListenerThread == nullptr)
-  {
-    LogE("ThreadPool::Run() failed");
-
-    CloseSocket();
-    return false;
-  }
-
-  WorkerThread = Pool.Run(std::bind(&Manager::Worker, this));
-  if (WorkerThread == nullptr)
-  {
-    LogE("ThreadPool::Run() failed");
-
-    CloseSocket();
-    return false;
-  }
-
-  return true;
+  return WebsocketServer::Start(port);
 }
 
 void Manager::Stop()
 {
-  if (GetEventState(StopEvent) == STATE::NOT_SIGNALLED)
-  {
-    // !?!?!
-    SetEvent(StopEvent);
-  }
-
-  CloseSocket();
-
-  if (WorkerThread)
-  {
-    auto rc = WaitForSingleObject(WorkerThread, FOREVER);
-    assert(rc == WAIT_RESULT::OBJECT_0);
-
-    CloseHandle(WorkerThread);
-  }
-
-  if (ListenerThread)
-  {
-    auto rc = WaitForSingleObject(ListenerThread, FOREVER);
-    assert(rc == WAIT_RESULT::OBJECT_0);
-
-    CloseHandle(ListenerThread);
-  }
-}
-
-void Manager::Worker()
-{
-  SET_CUR_THREAD_NAME_EX("Counters worker");
-
-  EventArray arr(StopEvent, DeletedEvent);
-  while (WaitForMultipleObjects(arr, false, WorkerTimeout) != WAIT_RESULT::OBJECT_0)
-  {
-    std::lock_guard<std::mutex> guard(Lock);
-    auto t = GetTimeInMillisec();
-
-    for (bool cont = true; cont;)
-    {
-      cont = false;
-      for (auto it = Deleted.begin(); it != Deleted.end(); ++it)
-      {
-        auto& c = *it;
-        auto d = t - c->Deleted;
-
-        if (d > DELETE_AFTER)
-        {
-          cont = true;
-          Deleted.erase(it);
-          SetDirty();
-          break;
-        }
-      }
-    }
-
-    WorkerTimeout = Deleted.empty() ? FOREVER : 1000;
-  }
-
-  std::lock_guard<std::mutex> guard(Lock);
-  Deleted.clear();
-}
-
-void Manager::Listener()
-{
-  SET_CUR_THREAD_NAME_EX("Counters listener");
-
-  ThreadsList threads;
-  while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
-  {
-    int accept_sock = (int)accept(Socket, nullptr, nullptr);
-    if (accept_sock == -1)
-    {
-      if (!Exiting)
-        LogosE("accept() failed");
-
-      break;
-    }
-
-    HEvent h = Pool.Run(std::bind(&Manager::ConnectionWorker, this, accept_sock));
-    if (h == nullptr)
-    {
-      LogE("ThreadPool::Run() failed");
-
-      closesocket(accept_sock);
-      continue;
-    }
-
-    threads.Add(h);
-  }
-}
-
-void Manager::ConnectionWorker(int socket)
-{
-  Logme::ID ch = CH;
-  SocketPair pair(ch, StopEvent, Config);
-
-  pair.Client = pair.CreateBIOSocket();
-  pair.Client->Attach(socket);
-  pair.Client->Configure();
-
-  uint64_t lastReq = GetTimeInMillisec();
-
-  while (WaitForSingleObject(StopEvent, 0) != WAIT_RESULT::OBJECT_0)
-  {
-    std::vector<char> buffer(64 * 1024);
-    int n = pair.Client->Read(buffer, 500);
-    if (n < 0 || pair.Client->Peer.Disconnected)
-      break;
-
-    if (n == 0)
-    {
-      auto silence = GetTimeInMillisec() - lastReq;
-
-      if (silence > 60000)
-      {
-        Json::Value res;
-        res["ok"] = false;
-        res["descr"] = "wake up";
-        pair.Client->WriteStr(Json::FastWriter().write(res));
-
-        lastReq = GetTimeInMillisec();
-      }
-
-      continue;
-    }
-    
-    std::string cmd(&buffer[0], n);
-    lastReq = GetTimeInMillisec();
-
-    Json::Value root;
-    Json::Reader reader;
-    if (!reader.parse(cmd, root))
-      continue;
-
-    std::string command;
-    uint64_t timestamp = 0;
-
-    if (root["cmd"].isString())
-      command = root["cmd"].asString();
-
-    if (root["timestamp"].isUInt64())
-      timestamp = root["timestamp"].asUInt64();
-
-    if (command == "exit")
-    {
-      pair.Close();
-      break;
-    }
-
-    if (command == "get")
-    {
-      std::string json = GrabStat(timestamp);
-      
-      char buf[64];
-      snprintf(buf, sizeof(buf) -1, "Content-Length: %zu\r\n", json.size());
-      
-      pair.Client->WriteStr(buf);
-      pair.Client->WriteStr(json);
-      continue;
-    }
-
-    Json::Value res;
-    res["ok"] = false;
-    res["descr"] = "unsupported command";
-    pair.Client->WriteStr(Json::FastWriter().write(res));
-  }
+  WebsocketServer::Stop();
 }
 
 std::string Manager::GrabStat(uint64_t timestamp)
@@ -404,6 +146,25 @@ void Manager::OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& r
 
 void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& msg)
 {
+  Json::Value root;
+  Json::Reader reader;
+  if (!reader.parse(msg, root))
+    return;
+
+  std::string command;
+  uint64_t timestamp = 0;
+
+  if (root["cmd"].isString())
+    command = root["cmd"].asString();
+
+  if (root["timestamp"].isUInt64())
+    timestamp = root["timestamp"].asUInt64();
+
+  if (command == "get")
+  {
+    std::string stat = GrabStat(timestamp);
+    channel->send(stat);
+  }
 }
 
 void Manager::OnClose(const WebSocketChannelPtr& channel)
