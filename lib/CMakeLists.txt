@@ -64,7 +64,7 @@ if(NOT ${USE_STATME_ONLY})
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
   
-  target_link_libraries(statmed LINK_PRIVATE 
+  target_link_libraries(statmed PUBLIC
     hv
     syncmed
     logmed 
@@ -73,9 +73,9 @@ if(NOT ${USE_STATME_ONLY})
   )
 
   if(WIN32)
-    target_link_libraries(statmed LINK_PUBLIC WS2_32.Lib) 
+    target_link_libraries(statmed PUBLIC WS2_32.Lib)
   else()
-    target_link_libraries(statmed LINK_PUBLIC pthread) 
+    target_link_libraries(statmed PUBLIC pthread)
   endif()
   message(STATUS "statmed SHARED added, ${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
