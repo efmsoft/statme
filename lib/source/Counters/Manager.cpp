@@ -1,18 +1,9 @@
 #include <cassert>
 
 #include <Logme/Logme.h>
-
 #include <Syncme/Logger/Log.h>
-#include <Syncme/ProcessThreadId.h>
-#include <Syncme/SetThreadName.h>
-#include <Syncme/Sockets/API.h>
-#include <Syncme/Sockets/SocketPair.h>
-#include <Syncme/ThreadPool/ThreadList.h>
 #include <Syncme/TickCount.h>
 
-#include <Statme/Counters/Counter.h>
-#include <Statme/Counters/Counters.h>
-#include <Statme/Counters/Holder.h>
 #include <Statme/Counters/Manager.h>
 
 #include "WebSocketServerEx.h"
