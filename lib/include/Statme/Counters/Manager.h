@@ -61,11 +61,15 @@ namespace Counters
     STATMELNK void Stop();
     STATMELNK void SetDirty();
 
+    STATMELNK static std::string EncodeMessage(const std::string& msg);
+    STATMELNK static std::string DecodeMessage(const std::string& msg);
+
   protected:
     void OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& req) override;
     void OnMessage(const WebSocketChannelPtr& channel, const std::string& msg) override;
     void OnClose(const WebSocketChannelPtr& channel) override;
 
     std::string GrabStat(uint64_t timestamp);
+    static std::string Compress(const std::string& str);
   };
 }

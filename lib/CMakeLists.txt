@@ -2,6 +2,7 @@ file(GLOB_RECURSE SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
 file(GLOB_RECURSE HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.h")
 
 find_package(libhv CONFIG REQUIRED)
+find_package(zlib)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 include(AsUCharArray)
@@ -68,6 +69,7 @@ if(NOT ${USE_STATME_ONLY})
     hv
     syncmed
     logmed 
+    ZLIB::ZLIB
     ${OPENSSL_LIBRARIES} 
     ${JSONCPP_LIBRARIES}
   )

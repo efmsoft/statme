@@ -1,10 +1,12 @@
 #include <cassert>
+#include <zlib.h>
 
 #include <Logme/Logme.h>
 #include <Syncme/Logger/Log.h>
 #include <Syncme/TickCount.h>
 
 #include <Statme/Counters/Manager.h>
+#include <Statme/http/Base64.hpp>
 
 #include "WebSocketServerEx.h"
 
@@ -131,15 +133,108 @@ std::string Manager::GrabStat(uint64_t timestamp)
   return Json::FastWriter().write(root);
 }
 
+std::string Manager::EncodeMessage(const std::string& data)
+{
+  std::string gzip = Compress(data);
+  return base64::to_base64(gzip);
+}
+
+std::string Manager::DecodeMessage(const std::string& msg)
+{
+  std::string str = base64::from_base64(msg);
+
+  z_stream zs;
+  memset(&zs, 0, sizeof(zs));
+
+  if (inflateInit(&zs) != Z_OK)
+    return std::string();
+
+  zs.next_in = (Bytef*)str.data();
+  zs.avail_in = str.size();
+
+  int ret = 0;
+  std::string outstring;
+  static char outbuffer[16 * 1024] = { 0 };
+
+  do 
+  {
+    zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+    zs.avail_out = sizeof(outbuffer);
+
+    ret = inflate(&zs, 0);
+
+    if (outstring.size() < zs.total_out) 
+    {
+      outstring.append(
+        outbuffer
+        , zs.total_out - outstring.size()
+      );
+    }
+
+  } while (ret == Z_OK);
+
+  inflateEnd(&zs);
+
+  if (ret != Z_STREAM_END)
+    return std::string();
+
+  return outstring;
+}
+
+std::string Manager::Compress(const std::string& str)
+{
+  int compressionlevel = Z_BEST_COMPRESSION;
+
+  z_stream zs;                        // z_stream is zlib's control structure
+  memset(&zs, 0, sizeof(zs));
+
+  if (deflateInit(&zs, compressionlevel) != Z_OK)
+    return std::string();
+
+  zs.next_in = (Bytef*)str.data();
+  zs.avail_in = str.size();           // set the z_stream's input
+
+  int ret = 0;
+  std::string outstring;
+  static char outbuffer[16 * 1024] = { 0 };
+
+  do 
+  {
+    zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+    zs.avail_out = sizeof(outbuffer);
+
+    ret = deflate(&zs, Z_FINISH);
+
+    if (outstring.size() < zs.total_out) 
+    {
+      // append the block to the output string
+      outstring.append(
+        outbuffer
+        , zs.total_out - outstring.size()
+      );
+    }
+
+  } while (ret == Z_OK);
+
+  deflateEnd(&zs);
+
+  if (ret != Z_STREAM_END)
+    return std::string();
+
+  return outstring;
+}
+
 void Manager::OnOpen(const WebSocketChannelPtr& channel, const HttpRequestPtr& req)
 {
 }
 
 void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& msg)
 {
+  std::string decoded(DecodeMessage(msg));
+
   Json::Value root;
   Json::Reader reader;
-  if (!reader.parse(msg, root))
+  if (!reader.parse(decoded, root))
     return;
 
   std::string command;
@@ -154,7 +249,7 @@ void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& m
   if (command == "get")
   {
     std::string stat = GrabStat(timestamp);
-    channel->send(stat);
+    channel->send(EncodeMessage(stat));
   }
 }
 
