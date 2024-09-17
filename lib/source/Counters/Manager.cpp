@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <cassert>
 #include <zlib.h>
 
@@ -133,16 +134,26 @@ std::string Manager::GrabStat(uint64_t timestamp)
   return Json::FastWriter().write(root);
 }
 
-std::string Manager::EncodeMessage(const std::string& data)
+void Manager::EncodeAndSendMessage(
+  const WebSocketChannelPtr& channel
+  , const std::string& data
+)
 {
-  std::string gzip = Compress(data);
-  return base64::to_base64(gzip);
+  const size_t limit = 8ULL * 1024;
+
+  int fragment = 0;
+  std::string msg = Compress(data);
+  channel->send(msg.c_str(), msg.size(), limit, WS_OPCODE_TEXT);
 }
 
-std::string Manager::DecodeMessage(const std::string& msg)
+std::string Manager::EncodeMessage(const std::string& data)
 {
-  std::string str = base64::from_base64(msg);
+  std::string msg = Compress(data);
+  return msg;
+}
 
+std::string Manager::DecodeMessage(const std::string& str)
+{
   z_stream zs;
   memset(&zs, 0, sizeof(zs));
 
@@ -249,7 +260,7 @@ void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& m
   if (command == "get")
   {
     std::string stat = GrabStat(timestamp);
-    channel->send(EncodeMessage(stat));
+    EncodeAndSendMessage(channel, stat);
   }
 }
 

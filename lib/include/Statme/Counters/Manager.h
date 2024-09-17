@@ -69,6 +69,8 @@ namespace Counters
     void OnMessage(const WebSocketChannelPtr& channel, const std::string& msg) override;
     void OnClose(const WebSocketChannelPtr& channel) override;
 
+    void EncodeAndSendMessage(const WebSocketChannelPtr& channel, const std::string& msg);
+
     std::string GrabStat(uint64_t timestamp);
     static std::string Compress(const std::string& str);
   };
