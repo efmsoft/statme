@@ -4,5 +4,7 @@
 #include "Model/Paragraph.h"
 #include "Model/Raw.h"
 #include "Model/Screen.h"
+#include "Model/ScriptedButton.h"
 #include "Model/Table.h"
+#include "Model/TextInput.h"
 #include "Model/Tree.h"
