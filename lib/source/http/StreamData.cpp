@@ -1,3 +1,4 @@
+#include <cassert>
 #include <string.h>
 
 #include <Statme/http/StreamData.h>
@@ -36,11 +37,17 @@ void StreamData::Append(const void* data, size_t n)
   if (n)
   {
     size_t cb = size();
-    size_t ncb = AlignSize(cb + n);
+    size_t size = cb + n;
     
-    reserve(ncb);
-    resize(cb + n);
+    if (size > capacity())
+    {
+      size_t ncb = AlignSize(size);
+      assert(ncb >= size);
 
+      reserve(ncb);
+    }
+
+    resize(size);
     memcpy(&(*this)[cb], data, n);
   }
 }
