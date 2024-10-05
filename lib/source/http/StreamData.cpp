@@ -2,6 +2,14 @@
 
 #include <Statme/http/StreamData.h>
 
+static const size_t BLOCK_SIZE = 64UL * 1024;
+
+static size_t AlignSize(size_t n)
+{
+  size_t blocks = ((n + BLOCK_SIZE - 1) / BLOCK_SIZE);
+  return blocks * BLOCK_SIZE;
+}
+
 StreamData::StreamData(size_t prealloc)
   : std::vector<char>()
 {
@@ -28,6 +36,9 @@ void StreamData::Append(const void* data, size_t n)
   if (n)
   {
     size_t cb = size();
+    size_t ncb = AlignSize(cb + n);
+    
+    reserve(ncb);
     resize(cb + n);
 
     memcpy(&(*this)[cb], data, n);
