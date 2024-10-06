@@ -2,14 +2,10 @@
 
 #include <Statme/http/StreamData.h>
 
-static const size_t MIN_BLOCK = 4ULL * 1024;
-static const size_t PREALLOC = 64ULL * 1024;
-
 StreamData::StreamData(size_t prealloc)
   : std::vector<char>()
 {
-  if (prealloc)
-    reserve(prealloc);
+  reserve(prealloc);
 }
 
 StreamData::operator const char* () const
@@ -31,9 +27,6 @@ void StreamData::Append(const void* data, size_t n)
 {
   if (n)
   {
-    if (empty() && (n >= MIN_BLOCK && n < PREALLOC))
-      reserve(PREALLOC);
-
     size_t cb = size();
     size_t size = cb + n;
     

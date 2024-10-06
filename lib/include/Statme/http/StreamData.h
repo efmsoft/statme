@@ -8,7 +8,7 @@
 
 struct StreamData : public std::vector<char>
 {
-  STATMELNK StreamData(size_t prealloc = 0);
+  STATMELNK StreamData(size_t prealloc);
 
   STATMELNK void Append(const void* data, size_t size);
   STATMELNK void Append(const std::vector<char>& stream);
