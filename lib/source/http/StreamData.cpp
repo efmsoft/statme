@@ -13,17 +13,17 @@ StreamData::operator const char* () const
   return &(*this)[0];
 }
 
-void StreamData::Append(const std::vector<char>& stream)
+size_t StreamData::Append(const std::vector<char>& stream)
 {
-  Append(&stream[0], stream.size());
+  return Append(&stream[0], stream.size());
 }
 
-void StreamData::Append(const std::string& str)
+size_t StreamData::Append(const std::string& str)
 {
-  Append(str.c_str(), str.size());
+  return Append(str.c_str(), str.size());
 }
 
-void StreamData::Append(const void* data, size_t n)
+size_t StreamData::Append(const void* data, size_t n)
 {
   if (n)
   {
@@ -33,4 +33,6 @@ void StreamData::Append(const void* data, size_t n)
     resize(size);
     memcpy(&(*this)[cb], data, n);
   }
+
+  return size();
 }
