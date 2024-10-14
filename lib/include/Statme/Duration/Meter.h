@@ -25,7 +25,7 @@ namespace Duration
     STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);
     STATMELNK static CalculatorPtr StartThreadMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);
 
-    STATMELNK void PrintResults(const Logme::ID& ch, const std::string& title);
+    STATMELNK void PrintResults(const Logme::ID& ch, const std::string& title, uint64_t* pthreadid = nullptr);
 
     struct Handle
     {
@@ -59,7 +59,7 @@ namespace Duration
     friend Calculator;
     void StopMeasurement(uint64_t id, uint64_t duration, MeasurementPtr parent);
 
-    ThreadDataPtr PopThreadData();
+    ThreadDataPtr PopThreadData(uint64_t* pthreadid = nullptr);
     void AppendData(std::string& str, const std::string& align, MeasurementPtr m);
   };
 }

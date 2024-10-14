@@ -130,9 +130,9 @@ void Meter::StopMeasurement(
   }
 }
 
-ThreadDataPtr Meter::PopThreadData()
+ThreadDataPtr Meter::PopThreadData(uint64_t* pthreadid)
 {
-  auto id = GetCurrentThreadId();
+  auto id = pthreadid ? *pthreadid : GetCurrentThreadId();
   Lock.Acquire();
 
   auto it = Map.find(id);
@@ -173,9 +173,10 @@ void Meter::AppendData(
 void Meter::PrintResults(
   const Logme::ID& ch
   , const std::string& title
+  , uint64_t* pthreadid
 )
 {
-  ThreadDataPtr data = PopThreadData();
+  ThreadDataPtr data = PopThreadData(pthreadid);
   if (data == nullptr)
     return;
 
