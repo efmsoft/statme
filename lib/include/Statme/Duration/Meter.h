@@ -6,6 +6,7 @@
 #include <Statme/Duration/Calculator.h>
 #include <Statme/Duration/Printer.h>
 #include <Statme/Duration/ThreadData.h>
+#include <Statme/Duration/Tracer.h>
 #include <Statme/Macros.h>
 #include <Syncme/CritSection.h>
 
@@ -93,3 +94,5 @@ namespace Duration
   Duration::Printer _dprinter(DurationMeter, CH, t); \
   Duration::CalculatorPtr _dcalc = DurationMeter.StartMeasurement(_dc, __FUNCTION__)
 
+#define DURATION_TRACER(...) \
+  Duration::Tracer _tracer(__FUNCTION__, __VA_ARGS__)
