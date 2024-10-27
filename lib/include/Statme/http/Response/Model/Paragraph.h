@@ -12,6 +12,7 @@ namespace Model
   struct ParagraphSettings
   {
     bool Uniform{true};
+    size_t LineLength{128};
   };
 
   class IParagraph : public IDrawable

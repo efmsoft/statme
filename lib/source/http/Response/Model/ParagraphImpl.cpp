@@ -66,7 +66,7 @@ void ParagraphImpl::DrawAsHtml(std::ostream& o)
 {
   if (Settings.Uniform)
   {
-    o << "<pre>";
+    o << R"(<pre style="max-width: )" << Settings.LineLength << R"(ch; white-space: pre-wrap; overflow-wrap: break-word;">)";
     for (const auto& l : Lines)
       o << l << "\n";
     o << "</pre>\n";
