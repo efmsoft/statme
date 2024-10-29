@@ -171,6 +171,15 @@ int Broker::PrepareSocket(const std::string& ip, int port)
     freeaddrinfo(addr);
     return -1;
   }
+  
+  int reuse = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
+  {
+    LogosE("setsockopt(SO_REUSEADDR) failed");
+    
+    freeaddrinfo(addr);
+    return -1;
+  }
 
   rc = bind(sock, addr->ai_addr, (int)addr->ai_addrlen);
   if (rc)
