@@ -50,7 +50,7 @@ Version Version::Parse(const std::string& ver)
   int minor = 0;
 
   std::smatch m;
-  std::regex r("HTTP/(\\d+)\\.(\\d+)", std::regex_constants::icase);
+  static std::regex r("HTTP/(\\d+)\\.(\\d+)", std::regex_constants::icase);
   if (std::regex_match(ver, m, r))
   {
     major = atoi(m[1].str().c_str());
