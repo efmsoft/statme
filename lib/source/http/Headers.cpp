@@ -210,9 +210,14 @@ std::string Headers::ToString(
   , bool dropTermination
 ) const
 {
-  std::string str(indent);
-  str += ReqRes;
-  str += "\r\n";
+  std::string str;
+  
+  if (ReqRes.empty() == false)
+  {
+    str += indent;
+    str += ReqRes;
+    str += "\r\n";
+  }
 
   for (auto it = Header.begin(); it != Header.end(); ++it)
   {
