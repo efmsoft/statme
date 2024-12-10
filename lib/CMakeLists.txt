@@ -64,9 +64,13 @@ if(NOT ${USE_STATME_ONLY})
   if(WIN32)
     target_compile_definitions(statmed PUBLIC ${STATME_WIN32_DEFS})
   endif()
+
+  if (NOT LIB_HV_LIBRARY)
+    set(LIB_HV_LIBRARY hv)
+  endif()
   
   target_link_libraries(statmed PUBLIC
-    hv
+    ${LIB_HV_LIBRARY}
     syncmed
     logmed 
     ZLIB::ZLIB
