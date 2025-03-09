@@ -67,9 +67,15 @@ void TableImpl::DrawAsHtml(std::ostream& o)
       continue;
 
     const auto& row = Rows[i];
+    auto cells = row->GetCells();
+    size_t cellsCount = cells.size();
+    if (HasHeader)
+      cellsCount = std::max(cellsCount, Rows.front()->GetCells().size());
+
     o << "<tr>\n";
-    for (const auto& cell: row->GetCells())
+    for (size_t j{}; j < cellsCount; ++j)
     {
+      const auto& cell = j < cells.size() ? cells[j] : IParagraph::Create();
       o << (i == 0 ? "<th>" : "<td>");
       cell->DrawAsHtml(o);
       o << (i == 0 ? "</th>" : "</td>");

@@ -4,6 +4,19 @@
 
 using namespace HTTP::Response;
 
+std::string PrettyTitle(const std::string& title)
+{
+  std::string result;
+  for (char c : title)
+  {
+    if (c == '_' || c == '-')
+      result.push_back(' ');
+    else
+      result.push_back(c);
+  }
+  return result;
+}
+
 std::string HtmlFormatter::GetMimeType()
 {
   return "text/html";
@@ -26,9 +39,9 @@ std::string HtmlFormatter::Run()
     for (auto& t : TOC)
     {
       if (t.Active)
-        ss << "&nbsp;<span>" << t.Title << "</span>";
+        ss << "&nbsp;<span>" << PrettyTitle(t.Title) << "</span>";
       else
-        ss << "&nbsp;<a href=\"" << t.Link << "\">" << t.Title << "</a>";
+        ss << "&nbsp;<a href=\"" << t.Link << "\">" << PrettyTitle(t.Title) << "</a>";
     } 
     ss << "</div>\n";
   }
