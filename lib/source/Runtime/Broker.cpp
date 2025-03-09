@@ -483,7 +483,7 @@ std::string Broker::ProcessRequest(
     TopicPtr topic = GetTopic(arr);
 
     std::lock_guard lock(Lock);
-    f->AddTOCItem(true, "home", ".");
+    f->AddTOCItem(true, "&#127968;", ".");
 
     for (auto& t : Topics)
     {
@@ -528,14 +528,22 @@ std::string Broker::ProcessRequest(
     std::string rel = arg1.empty() ? "./" : "../";
     f->Rel = rel;
 
-    f->AddTOCItem(false, "home", rel + "home");
+    f->AddTOCItem(false, "&#127968;", rel + "home");
     f->AddTOCItem(arg1.empty(), topic->Name, rel + topic->Name);
 
     for (auto& s : topic->Subtopics)
       f->AddTOCItem(s == arg1, s, rel + topic->Name + "/" + s);
     
-    if (!topic->Print(*f, arg1, arg2))
-      return InternalServerError.Data();
+    try
+    {
+      if (!topic->Print(*f, arg1, arg2))
+        return InternalServerError.Data();
+    }
+    catch (const std::exception& ex)
+    {
+      auto text = Model::IParagraph::Create(std::string("Server Exception:\n") + ex.what());
+      f->GetMainPage().AddContent(text);
+    }
   }
 
   if (!token.empty())

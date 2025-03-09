@@ -23,7 +23,7 @@ void ScriptedButtonImpl::DrawAsText(IScreen& screen)
 
 void ScriptedButtonImpl::DrawAsHtml(std::ostream& o)
 {
-  o << "<button type=\"button\" onclick=\"on_button_" + Id() + "()\">" + Text + "</button>" << std::endl;
+  o << "<div><button type=\"button\" onclick=\"on_button_" + Id() + "()\">" + Text + "</button></div>\n";
   o << "<script>\nfunction on_button_" + Id() + "() {\n";
   o << Script;
   o << "}\n</script>";

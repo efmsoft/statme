@@ -64,8 +64,10 @@ void TreeImpl::DrawAsHtml(std::ostream& o)
     if (item.Collapsable)
       o << "</summary>\n";
     
+    o << "<div>\n";
     if (item.Content)
       item.Content->DrawAsHtml(o);
+    o << "</div>\n";
 
     if (item.Collapsable)
       o << "</details>\n";
