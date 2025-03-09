@@ -7,37 +7,62 @@ body {
     font-size: 10pt;
 }
 
-.tree
-{
-    --spacing: 1.5rem;
-    --radius: 10px;
+/* Animation for ALL content inside details element */
+.tree details > * {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity var(--animation-duration) ease-out, 
+                height var(--animation-duration) ease-out;
 }
 
-.tree li
-{
+.tree details > summary {
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+}
+
+.tree details[open] > * {
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+}/* Enhanced Tree Styling */
+.tree {
+    --spacing: 1.5rem;
+    --radius: 10px;
+    --line-color: #ccc;
+    --node-color: #E9E3CB;
+    --icon-color: #696;
+    --hover-color: rgba(233, 227, 203, 0.3);
+    --text-color: #333;
+    --animation-duration: 0.3s;
+    font-family: system-ui;
+    padding: 0.5rem;
+}
+
+.tree li {
     display: block;
     position: relative;
     padding-left: calc(2 * var(--spacing) - var(--radius) - 2px);
+    margin: 0.5rem 0;
+    transition: all 0.2s ease;
 }
 
-.tree ul
-{
+.tree ul {
     margin-left: calc(var(--radius) - var(--spacing));
     padding-left: 0;
+    overflow: hidden; /* Ensure content doesn't leak during animation */
 }
 
-.tree ul li
-{
-    border-left: 2px solid #ddd;
+.tree ul li {
+    border-left: 2px solid var(--line-color);
 }
 
-.tree ul li:last-child
-{
+.tree ul li:last-child {
     border-color: transparent;
 }
 
-.tree ul li::before
-{
+.tree ul li::before {
     content: '';
     display: block;
     position: absolute;
@@ -45,35 +70,39 @@ body {
     left: -2px;
     width: calc(var(--spacing) + 2px);
     height: calc(var(--spacing) + 1px);
-    border: solid #ddd;
+    border: solid var(--line-color);
     border-width: 0 0 2px 2px;
+    border-radius: 0 0 0 5px;
 }
 
-.tree summary
-{
+.tree summary {
     display: block;
     cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    color: var(--text-color);
+}
+
+.tree summary:hover {
+    background-color: var(--hover-color);
 }
 
 .tree summary::marker,
-.tree summary::-webkit-details-marker
-{
+.tree summary::-webkit-details-marker {
     display: none;
 }
 
-.tree summary:focus
-{
+.tree summary:focus {
     outline: none;
 }
 
-.tree summary:focus-visible
-{
-    outline: 1px dotted #000;
+.tree summary:focus-visible {
+    outline: 2px solid var(--icon-color);
+    outline-offset: 2px;
 }
 
-.tree li::after,
-.tree summary::before
-{
+.tree li::after {
     content: '';
     display: block;
     position: absolute;
@@ -82,36 +111,195 @@ body {
     width: calc(2 * var(--radius));
     height: calc(2 * var(--radius));
     border-radius: 50%;
-    background: #ddd;
+    background: var(--node-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.tree summary::before
-{
+.tree summary::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: calc(var(--spacing) / 2 - var(--radius));
+    left: calc(var(--spacing) - var(--radius) - 1px);
+    width: calc(2 * var(--radius));
+    height: calc(2 * var(--radius));
+    border-radius: 50%;
     z-index: 1;
-    background: #696;
+    background: var(--icon-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><g fill=\"%23fff\"><path d=\"m5 9h4v-4h2v4h4v2h-4v4h-2v-4h-4z\"/><path d=\"m25 9h10v2h-10z\"/></g></svg>') no-repeat 0 0 / 200%;
+    transition: all 0.3s ease;
 }
 
-.tree details[open] > summary::before
-{
-    background: #696;
+.tree details[open] > summary::before {
+    background: var(--icon-color);
     mask-position: calc(-2 * var(--radius)) 0;
+    transform: none; /* Remove the rotation */
 }
 
-.tree details:not([open]) > summary::before
-{
-    background: #696;
+.tree details:not([open]) > summary::before {
+    background: var(--icon-color);
 }
 
+/* Tree item text styling */
+.tree li span,
+.tree summary span {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    padding-left: calc(var(--radius) * 2 + 8px);
+    font-size: 10pt;
+}
+
+/* Enhanced animations for opening/closing */
+.tree details > ul,
+.tree details > div {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition-property: max-height, opacity;
+    transition-duration: var(--animation-duration);
+    transition-timing-function: ease-out;
+}
+
+.tree details[open] > ul,
+.tree details[open] > div {
+    max-height: 1000px; /* A value large enough to accommodate your content */
+    opacity: 1;
+    animation: slideDown var(--animation-duration) ease-in-out;
+}
+
+@keyframes slideDown {
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Animation for elements below the expanding node */
+.tree details[open] ~ li {
+    animation: slideDownDelayed var(--animation-duration) ease-out;
+}
+
+@keyframes slideDownDelayed {
+    from { 
+        transform: translateY(-100%); 
+    }
+    to { 
+        transform: translateY(0); 
+    }
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) */
+.tree details:not([open]) > ul,
+.tree details:not([open]) > div {
+    display: none;
+}
+
+.tree details[open] > ul,
+.tree details[open] > div {
+    display: block;
+}
+
+/* Enhanced Table Styling */
 table {
-    border: solid 1px black;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: auto;
+    font-family: system-ui;
+    font-size: 10pt;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+    background-color: #FFFDEA;
+    margin: 8px 0;
+    border-radius: var(--radius, 10px);
+    overflow: hidden;
+    border: 1px solid #ddd;
 }
 
-th, td {
+/* Table Headers */
+th {
+    background-color: #E9E3CB;
+    color: #333;
+    font-weight: bold;
     text-align: left;
-    border: solid 1px black;
-    padding: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+}
+
+/* Last header doesn't need right border */
+th:last-child {
+    border-right: none;
+}
+
+/* Style for left column */
+th:first-child,
+td:first-child {
+    border-left: none; /* Remove left border as table has border */
+}
+
+/* Style for right column */
+th:last-child,
+td:last-child {
+    border-right: none; /* Already set above, but keeping for clarity */
+}
+
+/* Table Cells */
+td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+}
+
+/* Last cell in row doesn't need right border */
+td:last-child {
+    border-right: none;
+}
+
+/* Remove bottom border from last row */
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Row Hover Effect */
+tr:hover {
+    background-color: rgba(233, 227, 203, 0.2);
+}
+
+/* Zebra Striping for Rows */
+tr:nth-child(even) {
+    background-color: rgba(255, 253, 234, 0.5);
+}
+
+/* First Row Styling - proper rounded corners */
+tr:first-child th:first-child {
+    border-top-left-radius: var(--radius, 10px);
+}
+
+tr:first-child th:last-child {
+    border-top-right-radius: var(--radius, 10px);
+}
+
+/* Last Row Styling - proper rounded corners */
+tr:last-child td:first-child {
+    border-bottom-left-radius: var(--radius, 10px);
+}
+
+tr:last-child td:last-child {
+    border-bottom-right-radius: var(--radius, 10px);
+}
+
+/* Optional: Add responsive table container for horizontal scrolling */
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 a:visited, a:link {
@@ -119,18 +307,164 @@ a:visited, a:link {
     padding: 3px;
 }
 
+/* Enhanced TOC Styling */
 .toc {
     font-size: 12pt;
     background: #E9E3CB;
-    padding: 8px;
+    padding: 8px 12px;
     width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--radius, 10px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.toc a {
+    color: #333;
+    text-decoration: none;
+    padding: 3px 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.toc a:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    color: #0000d0;
+}
+
+.toc a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background-color: #0000d0;
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
+}
+
+.toc a:hover::after {
+    transform: scaleX(1);
+}
+
+.toc a.active {
+    font-weight: bold;
+    color: #0000d0;
+    background-color: rgba(255, 255, 255, 0.6);
 }
 
 .toc span {
     color: #0000d0;
-    font-weight:bold;
+    font-weight: bold;
+    margin-right: 8px;
+    position: relative;
+    padding-right: 12px;
+}
+
+.toc span::after {
+    content: '\25CF';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .toc {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .toc span {
+        margin-bottom: 8px;
+        display: block;
+    }
 }
 
 .content {
+    padding: 16px;
+    background: #FFFDEA;
+    border-radius: var(--radius, 10px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Tab wrapper to ensure alignment */
+.tab-wrapper {
+    display: inline-block;
+    max-width: 100%;
+}
+
+/* Tab Container */
+.tab {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    background: #E9E3CB;
     padding: 8px;
+    width: auto;
+    box-sizing: border-box;
+    border-radius: var(--radius, 10px) var(--radius, 10px) 0 0;
+}
+
+/* Tab Buttons */
+.tab button {
+    background: #FFFDEA;
+    border: 1px solid #ddd;
+    border-radius: var(--radius, 10px) var(--radius, 10px) 0 0;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: system-ui;
+    font-size: 10pt;
+    transition: all 0.2s ease;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.tab button:hover {
+    background: #F4F1E0;
+}
+
+.tab button.active {
+    background: #FFFDEA;
+    border-bottom-color: #FFFDEA;
+    color: #000;
+    font-weight: bold;
+}
+
+/* Tab Content */
+.tabcontent {
+    display: none;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-top: none;
+    background: #FFFDEA;
+    border-radius: 0 0 var(--radius, 10px) var(--radius, 10px);
+    box-sizing: border-box;
+    overflow-x: auto;
+}
+
+/* Animated tab transitions */
+.tabcontent {
+    animation: fadeEffect 0.5s;
+}
+
+@keyframes fadeEffect {
+    from {opacity: 0;}
+    to {opacity: 1;}
 }
