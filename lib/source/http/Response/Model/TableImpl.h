@@ -9,10 +9,12 @@ namespace Model
   class RowImpl : public IRow
   {
     std::vector<std::shared_ptr<IDrawable>> Cells;
+    std::vector<std::string> Styles;
 
   public:
     const std::vector<std::shared_ptr<IDrawable>>& GetCells() const;
-    RowImpl& AddCell(const std::shared_ptr<IDrawable>& cell) override;
+    const std::vector<std::string>& GetStyles() const;
+    RowImpl& AddCell(const std::shared_ptr<IDrawable>& cell, const std::string& style) override;
   };
 
   class TableImpl : public ITable

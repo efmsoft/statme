@@ -8,14 +8,19 @@
 
 namespace Model
 {
+  struct RowStyle
+  {
+    STATMELNK static std::string TopAlign();
+  };
+
   class IRow
   {
   public:
     virtual ~IRow() = default;
-    virtual IRow& AddCell(const std::shared_ptr<IDrawable>& cell) = 0;
-    IRow& AddCell(const std::string& text)
+    virtual IRow& AddCell(const std::shared_ptr<IDrawable>& cell, const std::string& style = "") = 0;
+    IRow& AddCell(const std::string& text, const std::string& style = "")
     {
-      return AddCell(IParagraph::Create(text, {.Uniform = true}));
+      return AddCell(IParagraph::Create(text, {.Uniform = true}), style);
     }
   };
 
