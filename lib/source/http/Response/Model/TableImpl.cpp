@@ -3,14 +3,25 @@
 
 using namespace Model;
 
+std::string RowStyle::TopAlign()
+{
+  return "vertical-align: top;";
+}
+
 const std::vector<std::shared_ptr<IDrawable>>& RowImpl::GetCells() const
 {
   return Cells;
 }
 
-RowImpl& RowImpl::AddCell(const std::shared_ptr<IDrawable>& cell)
+const std::vector<std::string>& RowImpl::GetStyles() const
+{
+  return Styles;
+}
+
+RowImpl& RowImpl::AddCell(const std::shared_ptr<IDrawable>& cell, const std::string& style)
 {
   Cells.push_back(cell);
+  Styles.push_back(style);
   return *this;
 }
 
@@ -67,7 +78,8 @@ void TableImpl::DrawAsHtml(std::ostream& o)
       continue;
 
     const auto& row = Rows[i];
-    auto cells = row->GetCells();
+    const auto& cells = row->GetCells();
+    const auto& styles = row->GetStyles();
     size_t cellsCount = cells.size();
     if (HasHeader)
       cellsCount = std::max(cellsCount, Rows.front()->GetCells().size());
@@ -76,7 +88,10 @@ void TableImpl::DrawAsHtml(std::ostream& o)
     for (size_t j{}; j < cellsCount; ++j)
     {
       const auto& cell = j < cells.size() ? cells[j] : IParagraph::Create();
-      o << (i == 0 ? "<th>" : "<td>");
+      o << (i == 0 ? "<th" : "<td");
+      if (j < styles.size() && !styles[j].empty())
+        o << " " << "style=\"" << styles[j] << "\"";
+      o << ">";
       cell->DrawAsHtml(o);
       o << (i == 0 ? "</th>" : "</td>");
     }
