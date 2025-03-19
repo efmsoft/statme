@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <format>
 #include <iostream>
 #include <sstream>
@@ -141,6 +142,75 @@ std::string Headers::Reparse()
   return h;
 }
 
+static char* ExtractHeaderLine(
+  char* buffer
+  , char*& context
+  , int& type
+)
+{
+  if (buffer == nullptr)
+  {
+    if (context == nullptr)
+      return nullptr;
+
+    buffer = context;
+  }
+
+  if (type == 0)
+  {
+    char* p = strchr(buffer, '\n');
+    if (p == nullptr)
+    {
+      context = nullptr;
+      return buffer;
+    }
+
+    *p = '\0';
+    context = p + 1;
+
+    int len = p - buffer;
+    if (len && p[-1] == '\r')
+    {
+      p[-1] = '\0';
+      type = '\r\n';
+    }
+    else
+      type = '\n';
+    
+    return buffer;
+  }
+
+  if (type == '\n')
+  {
+    char* p = strchr(buffer, '\n');
+    if (p == nullptr)
+    {
+      context = nullptr;
+      return buffer;
+    }
+
+    *p = '\0';
+    context = p + 1;
+    return buffer;
+  }
+
+  assert(type == '\r\n');
+
+  char* p = strstr(buffer, "\r\n");
+  if (p == nullptr)
+  {
+    context = nullptr;
+    return buffer;
+  }
+
+  context = p + 2;
+  
+  p[0] = '\0';
+  p[1] = '\0';
+
+  return buffer;
+}
+
 HEADER_ERROR Headers::Parse(
   const char* data
   , size_t length
@@ -158,9 +228,10 @@ HEADER_ERROR Headers::Parse(
   memcpy(&buf[0], data, Size);
   buf[Size] = '\0';
 
+  int eol = 0;
   char* ctx1 = nullptr;
-  char* line = strtok_s(&buf[0], "\r\n", &ctx1);
-  for (int i = 0; line; line = strtok_s(nullptr, "\r\n", &ctx1), ++i)
+  char* line = ExtractHeaderLine(&buf[0], ctx1, eol);
+  for (int i = 0; line; line = ExtractHeaderLine(nullptr, ctx1, eol), ++i)
   {
     if (*line == '\0')
       break;
