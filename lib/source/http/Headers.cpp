@@ -35,6 +35,9 @@ bool Headers::Empty() const
 void Headers::Clear()
 {
   Header.clear();
+  ReqRes.clear();
+  Body.clear();
+  Size = 0;
 }
 
 const char* Headers::sstrtok(
