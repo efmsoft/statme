@@ -23,7 +23,7 @@ namespace Counters
   {
     static Manager* Instance;
 
-    std::mutex Lock;
+    std::recursive_mutex Lock;
     uint64_t Modified;
     CounterArray Counters;
 
@@ -46,16 +46,18 @@ namespace Counters
     STATMELNK CounterPtr AddCounter(
       const char* name
       , const char* category
+      , bool create_always = true
     );
 
     STATMELNK CounterPtr AddCounter(
       const std::string& name
       , const char* category
+      , bool create_always = true
     );
 
     STATMELNK void DeleteCounter(CounterPtr counter);
 
-    STATMELNK std::mutex& GetLock();
+    STATMELNK std::recursive_mutex& GetLock();
 
     STATMELNK bool Start(int port);
     STATMELNK void Stop();
@@ -73,5 +75,7 @@ namespace Counters
 
     std::string GrabStat(uint64_t timestamp);
     static std::string Compress(const std::string& str);
+
+    void UpdateCounters();
   };
 }

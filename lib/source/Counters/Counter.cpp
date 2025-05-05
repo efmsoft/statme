@@ -38,11 +38,47 @@ void Counter::SetProperty(
   , const char* value
 )
 {
-  std::lock_guard<std::mutex> guard(Owner->GetLock());
+  std::lock_guard guard(Owner->GetLock());
 
   Properties[name] = value;
   Updated = GetTimeInMillisec();
   Owner->SetDirty();
+}
+
+void Counter::SetPropertyUpdater(const std::string& name, TGetValue u)
+{
+  std::lock_guard guard(Owner->GetLock());
+
+  if (u == nullptr)
+  {
+    auto it = Updater.find(name);
+    if (it != Updater.end())
+      Updater.erase(it);
+  }
+  else
+    Updater[name] = u;
+}
+
+void Counter::Update()
+{
+  std::lock_guard guard(Owner->GetLock());
+
+  if (Updater.empty())
+    return;
+
+  for (auto& p : Properties)
+  {
+    auto it = Updater.find(p.first);
+    if (it != Updater.end() && it->second)
+    {
+      std::string v = it->second(it->first);
+      if (v != p.second)
+      {
+        p.second = v;
+        Owner->SetDirty();
+      }
+    }
+  }
 }
 
 Json::Value Counter::Get() const

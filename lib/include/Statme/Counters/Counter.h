@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdint.h>
@@ -14,6 +15,8 @@ namespace Counters
 {
   class Manager;
   typedef std::map<std::string, std::string> PropMap;
+  typedef std::function<std::string(const std::string&)> TGetValue;
+  typedef std::map<std::string, TGetValue> UpdaterMap;
 
   constexpr static uint64_t DELETE_AFTER = 5000;
 
@@ -27,6 +30,7 @@ namespace Counters
     PropMap Properties;
 
     Manager* Owner;
+    UpdaterMap Updater;
   
     static uint64_t IDGenerator;
     uint64_t ID;
@@ -47,6 +51,9 @@ namespace Counters
         const char* name
         , const char* value
       );
+
+      STATMELNK void SetPropertyUpdater(const std::string& name, TGetValue u);
+      STATMELNK void Update();
 
       Json::Value Get() const;
   };

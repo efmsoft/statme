@@ -40,7 +40,7 @@ ManagerPtr Manager::GetInstance()
   return Instance->shared_from_this();
 }
 
-std::mutex& Manager::GetLock()
+std::recursive_mutex& Manager::GetLock()
 {
   return Lock;
 }
@@ -58,17 +58,30 @@ void Manager::SetDirty()
 CounterPtr Manager::AddCounter(
   const std::string& name
   , const char* category
+  , bool create_always
 )
 {
-  return AddCounter(name.c_str(), category);
+  return AddCounter(name.c_str(), category, create_always);
 }
 
 CounterPtr Manager::AddCounter(
   const char* name
   , const char* category
+  , bool create_always
 )
 {
-  std::lock_guard<std::mutex> guard(Lock);
+  std::lock_guard guard(Lock);
+
+  if (create_always == false)
+  {
+    for (auto it = Counters.begin(); it != Counters.end(); ++it)
+    {
+      auto& c = *it;
+
+      if (c->Pointer == name && c->Category == category)
+        return c;
+    }
+  }
 
   CounterPtr counter = std::make_shared<Counter>(this, name, category);
   Counters.push_back(counter);
@@ -80,7 +93,7 @@ CounterPtr Manager::AddCounter(
 
 void Manager::DeleteCounter(CounterPtr counter)
 {
-  std::lock_guard<std::mutex> guard(Lock);
+  std::lock_guard guard(Lock);
 
   for (auto it = Counters.begin(); it != Counters.end(); ++it)
   {
@@ -105,6 +118,14 @@ void Manager::Stop()
   WebsocketServer::Stop();
 }
 
+void Manager::UpdateCounters()
+{
+  std::lock_guard guard(Lock);
+
+  for (auto& c : Counters)
+    c->Update();
+}
+
 std::string Manager::GrabStat(uint64_t timestamp)
 {
   Json::Value root;
@@ -112,10 +133,12 @@ std::string Manager::GrabStat(uint64_t timestamp)
   root["timestamp"] = Modified;
   root["descr"] = "";
 
+  UpdateCounters();
+
   if (timestamp < Modified)
   {
     Json::Value item(Json::arrayValue);
-    std::lock_guard<std::mutex> guard(Lock);
+    std::lock_guard guard(Lock);
 
     for (auto& c : Counters)
       item.append(c->Get());
