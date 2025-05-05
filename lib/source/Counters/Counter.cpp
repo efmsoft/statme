@@ -77,6 +77,8 @@ void Counter::Update()
         p.second = v;
         Owner->SetDirty();
       }
+
+      Updated = GetTimeInMillisec();
     }
   }
 }
