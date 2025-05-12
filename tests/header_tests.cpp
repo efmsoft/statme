@@ -52,3 +52,18 @@ TEST(header_tests, full_header_failure)
   EXPECT_NE(ReqHeaders::TryParse("POST /bla http/1.1\r\nContent-Type: application/json\t\t"), HEADER_ERROR::NONE);
   EXPECT_NE(ReqHeaders::TryParse("GET /bla unknown\r\nContent-Type: application/json\r\n\r\n"), HEADER_ERROR::NONE);
 }
+
+TEST(header_tests, mix_sepatators)
+{
+  std::string data = "HTTP/1.1 200 OK\r\n  Content-Type: text/html;CHARset=utf-8\nConnection:close  \nX-Frame-Options: SAMEORIGIN  \nX-Content-Type-Options: nosniff  \nX-XSS-Protection: 1; mode=block\n\n\n<!DOCTYPE html>";
+
+  ResHeaders h;
+  auto e = h.Parse(data.c_str(), data.length(), Verification::NotStrict);
+  EXPECT_EQ(e, HEADER_ERROR::NONE);
+
+  h.AddHeader("Content-Length", "1234");
+  auto d2 = h.ToString();
+
+  std::string data2 = "HTTP/1.1 200 OK\r\nContent-Type: text/html;CHARset=utf-8\r\nConnection: close\r\nX-Frame-Options: SAMEORIGIN\r\nX-Content-Type-Options: nosniff\r\nX-XSS-Protection: 1; mode=block\r\nContent-Length: 1234\r\n\r\n\n<!DOCTYPE html>";
+  EXPECT_EQ(d2, data2);
+}

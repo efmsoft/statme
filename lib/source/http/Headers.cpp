@@ -171,7 +171,7 @@ static char* ExtractHeaderLine(
     *p = '\0';
     context = p + 1;
 
-    int len = p - buffer;
+    int len = int(p - buffer);
     if (len && p[-1] == '\r')
     {
       p[-1] = '\0';
@@ -180,6 +180,7 @@ static char* ExtractHeaderLine(
     else
       type = '\n';
     
+    type = 0;
     return buffer;
   }
 
