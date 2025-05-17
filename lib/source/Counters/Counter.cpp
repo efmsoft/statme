@@ -59,7 +59,7 @@ void Counter::SetPropertyUpdater(const std::string& name, TGetValue u)
     Updater[name] = u;
 }
 
-void Counter::Update()
+void Counter::Update(const std::optional<std::list<std::string>>& props)
 {
   std::lock_guard guard(Owner->GetLock());
 
@@ -71,6 +71,14 @@ void Counter::Update()
     auto it = Updater.find(p.first);
     if (it != Updater.end() && it->second)
     {
+      if (props.has_value())
+      {
+        auto& l = props.value();
+        auto it = std::find(l.begin(), l.end(), p.first);
+        if (it == l.end())
+          continue;
+      }
+
       std::string v = it->second(it->first);
       if (v != p.second)
       {
@@ -83,7 +91,7 @@ void Counter::Update()
   }
 }
 
-Json::Value Counter::Get() const
+Json::Value Counter::Get(const std::optional<std::list<std::string>>& properties) const
 {
   Json::Value value;
 
@@ -97,6 +105,14 @@ Json::Value Counter::Get() const
   Json::Value props(Json::arrayValue);
   for (auto& p : Properties)
   {
+    if (properties.has_value())
+    {
+      auto& l = properties.value();
+      auto it = std::find(l.begin(), l.end(), p.first);
+      if (it == l.end())
+        continue;
+    }
+
     Json::Value v;
     v[p.first] = p.second;
 

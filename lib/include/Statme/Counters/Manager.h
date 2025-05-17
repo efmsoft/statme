@@ -1,7 +1,9 @@
 #pragma once
 
+#include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include <Syncme/Config/Config.h>
 #include <Syncme/Sync.h>
@@ -73,9 +75,18 @@ namespace Counters
 
     void EncodeAndSendMessage(const WebSocketChannelPtr& channel, const std::string& msg);
 
-    std::string GrabStat(uint64_t timestamp);
+    std::string GrabStat(
+      uint64_t timestamp
+      , const std::optional<std::string>& category
+      , const std::optional<std::list<std::string>>& props
+    );
+
+    void UpdateCounters(
+      const std::optional<std::string>& category
+      , const std::optional<std::list<std::string>>& props
+    );
+
     static std::string Compress(const std::string& str);
 
-    void UpdateCounters();
   };
 }

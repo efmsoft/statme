@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -53,9 +54,9 @@ namespace Counters
       );
 
       STATMELNK void SetPropertyUpdater(const std::string& name, TGetValue u);
-      STATMELNK void Update();
+      STATMELNK void Update(const std::optional<std::list<std::string>>& props);
 
-      Json::Value Get() const;
+      Json::Value Get(const std::optional<std::list<std::string>>& props) const;
   };
 
   typedef std::shared_ptr<Counter> CounterPtr;

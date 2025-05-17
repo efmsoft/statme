@@ -118,22 +118,34 @@ void Manager::Stop()
   WebsocketServer::Stop();
 }
 
-void Manager::UpdateCounters()
+void Manager::UpdateCounters(
+  const std::optional<std::string>& category
+  , const std::optional<std::list<std::string>>& props
+)
 {
   std::lock_guard guard(Lock);
 
   for (auto& c : Counters)
-    c->Update();
+  {
+    if (category.has_value() && category.value() != c->Category)
+      continue;
+
+    c->Update(props);
+  }
 }
 
-std::string Manager::GrabStat(uint64_t timestamp)
+std::string Manager::GrabStat(
+  uint64_t timestamp
+  , const std::optional<std::string>& category
+  , const std::optional<std::list<std::string>>& props
+)
 {
   Json::Value root;
   root["ok"] = true;
   root["timestamp"] = Modified;
   root["descr"] = "";
 
-  UpdateCounters();
+  UpdateCounters(category, props);
 
   if (timestamp < Modified)
   {
@@ -141,10 +153,20 @@ std::string Manager::GrabStat(uint64_t timestamp)
     std::lock_guard guard(Lock);
 
     for (auto& c : Counters)
-      item.append(c->Get());
+    {
+      if (category.has_value() && category.value() != c->Category)
+        continue;
+
+      item.append(c->Get(props));
+    }
 
     for (auto& c : Deleted)
-      item.append(c->Get());
+    {
+      if (category.has_value() && category.value() != c->Category)
+        continue;
+
+      item.append(c->Get(props));
+    }
 
     root["item"] = item;
   }
@@ -273,17 +295,37 @@ void Manager::OnMessage(const WebSocketChannelPtr& channel, const std::string& m
 
   std::string command;
   uint64_t timestamp = 0;
+  std::optional<std::string> category;
 
-  if (root["cmd"].isString())
-    command = root["cmd"].asString();
-
-  if (root["timestamp"].isUInt64())
-    timestamp = root["timestamp"].asUInt64();
-
-  if (command == "get")
+  if (root.isMember("cmd") && root.isMember("timestamp"))
   {
-    std::string stat = GrabStat(timestamp);
-    EncodeAndSendMessage(channel, stat);
+    if (root["cmd"].isString())
+      command = root["cmd"].asString();
+
+    if (root["timestamp"].isUInt64())
+      timestamp = root["timestamp"].asUInt64();
+
+    if (root.isMember("category") && root["category"].isString())
+      category = root["category"].asString();
+
+    std::optional<std::list<std::string>> props;
+    if (root.isMember("properties") && root["properties"].isArray())
+    {
+      props = std::list<std::string>();
+
+      Json::Value& items = root["properties"];
+      for (Json::Value::ArrayIndex i = 0; i != items.size(); i++)
+      {
+        if (items[i].isString())
+          props.value().push_back(items[i].asString());
+      }
+    }
+
+    if (command == "get")
+    {
+      std::string stat = GrabStat(timestamp, category, props);
+      EncodeAndSendMessage(channel, stat);
+    }
   }
 }
 
