@@ -9,6 +9,8 @@
 #include <openssl/evp.h>
 #include <openssl/evperr.h>
 
+#include <Statme/Runtime/AES.h>
+
 #define DECL_OPENSSL_PTR(tname, free_func) \
   struct openssl_##tname##_dtor {          \
     void operator()(tname* v) {            \
@@ -115,22 +117,25 @@ public:
   }
 };
 
-bool AESEncrypt(
-  const std::vector<uint8_t>& key
-  , const std::vector<uint8_t>& message
-  , std::vector<uint8_t>& output
-)
+namespace Runtime
 {
-  AES256 aes;
-  return aes.Encrypt(key, message, output);
-}
+  bool AESEncrypt(
+    const std::vector<uint8_t>& key
+    , const std::vector<uint8_t>& message
+    , std::vector<uint8_t>& output
+  )
+  {
+    AES256 aes;
+    return aes.Encrypt(key, message, output);
+  }
 
-bool AESDecrypt(
-  const std::vector<uint8_t>& key
-  , const std::vector<uint8_t>& message
-  , std::vector<uint8_t>& output
-)
-{
-  AES256 aes;
-  return aes.Decrypt(key, message, output);
+  bool AESDecrypt(
+    const std::vector<uint8_t>& key
+    , const std::vector<uint8_t>& message
+    , std::vector<uint8_t>& output
+  )
+  {
+    AES256 aes;
+    return aes.Decrypt(key, message, output);
+  }
 }
