@@ -61,7 +61,7 @@ namespace Duration
     void StopMeasurement(uint64_t id, uint64_t duration, MeasurementPtr parent);
 
     ThreadDataPtr PopThreadData(uint64_t* pthreadid = nullptr);
-    void AppendData(std::string& str, const std::string& align, MeasurementPtr m);
+    void AppendData(std::string& str, const std::string& align, MeasurementPtr m, bool root = false);
   };
 }
 

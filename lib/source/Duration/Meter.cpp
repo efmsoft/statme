@@ -153,21 +153,28 @@ void Meter::AppendData(
   std::string& str
   , const std::string& align
   , MeasurementPtr m
+  , bool root
 )
 {
-  str += "\n";
-  str += align;
-  str += m->Name;
+  if (m->Duration || root)
+  {
+    str += "\n";
+    str += align;
+    str += m->Name;
 
-  // Do not add () for pseudo function metrics
-  if (*m->Name != '[')
-    str += "()";
+    // Do not add () for pseudo function metrics
+    if (*m->Name != '[')
+      str += "()";
   
-  str +=": ";
-  str += std::to_string(m->Duration);
+    str +=": ";
+    str += std::to_string(m->Duration);
 
-  for (auto& c : m->Child)
-    AppendData(str, align + "  ", c);
+    if (m->Duration)
+    {
+      for (auto& c : m->Child)
+        AppendData(str, align + "  ", c);
+    }
+  }
 }
 
 void Meter::PrintResults(
@@ -184,7 +191,7 @@ void Meter::PrintResults(
   str += "  [";
   str += title;
   str += "]";
-  AppendData(str, "    ", data->Root);
+  AppendData(str, "    ", data->Root, true);
 
   Logme::Override ovr;
   ovr.Remove.Method = true;
