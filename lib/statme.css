@@ -148,3 +148,8 @@ a:visited, a:link {
     border: 1px solid #ddd;
     background: #FFFDEA;
 }
+.dropdownresult {
+    border: 2px solid #ddd;
+    padding: 20px;
+    margin: 10px;
+}
