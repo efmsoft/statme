@@ -360,6 +360,8 @@ std::string Headers::BodyToString(
 
   auto n = std::min(limit, cb);
   
+  static constexpr std::string_view kBreakChars = " \t,.;:!?/\\-|)]}";
+
   size_t pos = 0;
   str += indent;
 
@@ -371,8 +373,27 @@ std::string Headers::BodyToString(
     else
       chunkLen = n - pos;
 
-    str.append(Body, pos, chunkLen);
-    pos += chunkLen;
+    size_t useLen = chunkLen;
+
+    if (split > 0 && chunkLen > 1)
+    {
+      size_t lastBreak = SIZE_MAX;
+      for (size_t i = chunkLen; i-- > 1; )
+      {
+        const char ch = Body[pos + i];
+        if (kBreakChars.find(ch) != std::string_view::npos)
+        {
+          lastBreak = i;
+          break;
+        }
+      }
+
+      if (lastBreak != SIZE_MAX)
+        useLen = lastBreak + 1;
+    }
+
+    str.append(Body, pos, useLen);
+    pos += useLen;
 
     if (split > 0 && pos < n)
     {

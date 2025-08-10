@@ -62,8 +62,8 @@ namespace HTTP
       STATMELNK std::string BodyToString(
         const char* indent = ""
         , bool InitialLF = false
-        , size_t limit = 256
-        , size_t split = 60
+        , size_t limit = 512
+        , size_t split = 120
       ) const;
 
       STATMELNK StringArrayPtr GetHeader(
