@@ -14,6 +14,8 @@ struct StreamData : public std::vector<char>
   STATMELNK size_t Append(const std::vector<char>& stream);
   STATMELNK size_t Append(const std::string& str);
 
+  STATMELNK size_t Replace(const std::string& str);
+
   STATMELNK operator const char* () const;
 };
 

@@ -56,12 +56,14 @@ namespace HTTP
       STATMELNK std::string ToString(
         const char* indent = ""
         , bool dropTermination = false
+        , bool appendBody = true
       ) const;
 
       STATMELNK std::string BodyToString(
         const char* indent = ""
         , bool InitialLF = false
         , size_t limit = 256
+        , size_t split = 60
       ) const;
 
       STATMELNK StringArrayPtr GetHeader(
@@ -142,5 +144,5 @@ namespace HTTP
   }
 }
 
-#define HEADERS_STR(h) h.ToString("  ", true).c_str()
+#define HEADERS_STR(h) h.ToString("  ", true, false).c_str()
 #define BODY_STR(h) h.BodyToString("  ", true).c_str()

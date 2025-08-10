@@ -283,6 +283,7 @@ HEADER_ERROR Headers::Parse(
 std::string Headers::ToString(
   const char* indent
   , bool dropTermination
+  , bool appendBody
 ) const
 {
   std::string str;
@@ -309,7 +310,7 @@ std::string Headers::ToString(
 
   str += "\r\n";
 
-  if (Body.empty() || (dropTermination && !Printable(Body)))
+  if (appendBody == false || Body.empty() || (dropTermination && !Printable(Body)))
   {
     if (dropTermination)
       str.resize(str.length() - 4);
@@ -329,6 +330,10 @@ std::string Headers::ToString(
     if (dropTermination && str.length() >= 2)
       str.resize(str.length() - 2);
   }
+
+  if (appendBody == false && Body.empty() == false)
+    str += "\n";
+
   return str;
 }
 
@@ -336,6 +341,7 @@ std::string Headers::BodyToString(
   const char* indent
   , bool InitialLF
   , size_t limit
+  , size_t split
 ) const
 {
   if (Body.empty())
@@ -352,7 +358,29 @@ std::string Headers::BodyToString(
     return str;
   }
 
-  str += Body.substr(0, std::min(limit, cb));
+  auto n = std::min(limit, cb);
+  
+  size_t pos = 0;
+  str += indent;
+
+  while (pos < n)
+  {
+    size_t chunkLen;
+    if (split > 0)
+      chunkLen = std::min(split, n - pos);
+    else
+      chunkLen = n - pos;
+
+    str.append(Body, pos, chunkLen);
+    pos += chunkLen;
+
+    if (split > 0 && pos < n)
+    {
+      str.push_back('\n');
+      str += indent;
+    }
+  }
+
   return str;
 }
 

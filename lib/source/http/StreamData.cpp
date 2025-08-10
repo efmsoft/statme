@@ -13,6 +13,12 @@ StreamData::operator const char* () const
   return &(*this)[0];
 }
 
+size_t StreamData::Replace(const std::string& str)
+{
+  clear();
+  return Append(str);
+}
+
 size_t StreamData::Append(const std::vector<char>& stream)
 {
   return Append(&stream[0], stream.size());
