@@ -21,11 +21,17 @@ size_t StreamData::Replace(const std::string& str)
 
 size_t StreamData::Append(const std::vector<char>& stream)
 {
+  if (stream.empty())
+    return size();
+
   return Append(&stream[0], stream.size());
 }
 
 size_t StreamData::Append(const std::string& str)
 {
+  if (str.empty())
+    return size();
+
   return Append(str.c_str(), str.size());
 }
 
