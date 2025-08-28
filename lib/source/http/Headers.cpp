@@ -145,6 +145,28 @@ std::string Headers::Reparse()
   return h;
 }
 
+static int SenseType(char* buffer)
+{
+  int n = 0;
+  int rn = 0;
+
+  while (*buffer)
+  {
+    char ch = *buffer++;
+    if (ch == '\r' && *buffer == '\n')
+    {
+      buffer++;
+      rn++;
+      continue;
+    }
+
+    if (ch == '\n')
+      n++;
+  }
+
+  return rn >= 2 || rn >= n ? '\r\n' : '\n';
+}
+
 static char* ExtractHeaderLine(
   char* buffer
   , char*& context
@@ -160,29 +182,7 @@ static char* ExtractHeaderLine(
   }
 
   if (type == 0)
-  {
-    char* p = strchr(buffer, '\n');
-    if (p == nullptr)
-    {
-      context = nullptr;
-      return buffer;
-    }
-
-    *p = '\0';
-    context = p + 1;
-
-    int len = int(p - buffer);
-    if (len && p[-1] == '\r')
-    {
-      p[-1] = '\0';
-      type = '\r\n';
-    }
-    else
-      type = '\n';
-    
-    type = 0;
-    return buffer;
-  }
+    type = SenseType(buffer);
 
   if (type == '\n')
   {
