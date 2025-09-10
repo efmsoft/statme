@@ -41,6 +41,8 @@ namespace HTTP
       std::string Body;
 
       bool LowerCase;
+      bool MixedLineEndings;
+      int LineEnding; // \n or \r\n
 
     public:
       STATMELNK Headers(bool lowerCase);
@@ -104,6 +106,12 @@ namespace HTTP
 
     private:
       static void PushValue(StringArrayPtr arr, const std::string& value, bool lowrcase);
+      int SenseType(char* buffer);
+      char* ExtractHeaderLine(
+        char* buffer
+        , char*& context
+        , int& type
+      );
     };
 
     struct ReqHeaders : public Headers 

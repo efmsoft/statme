@@ -20,6 +20,8 @@ static const char* SPEC = "_ :;.,\\/\"'?!(){}[]@<>=-+*#$&`|~^%";
 Headers::Headers(bool lowerCase)
   : Size(0)
   , LowerCase(lowerCase)
+  , MixedLineEndings(false)
+  , LineEnding('\r\n')
 {
 }
 
@@ -145,7 +147,7 @@ std::string Headers::Reparse()
   return h;
 }
 
-static int SenseType(char* buffer)
+int Headers::SenseType(char* buffer)
 {
   int n = 0;
   int rn = 0;
@@ -164,10 +166,13 @@ static int SenseType(char* buffer)
       n++;
   }
 
-  return rn >= 2 || rn >= n ? '\r\n' : '\n';
+  LineEnding = rn >= 2 || rn >= n ? '\r\n' : '\n';
+  MixedLineEndings = rn && n;
+
+  return LineEnding;
 }
 
-static char* ExtractHeaderLine(
+char* Headers::ExtractHeaderLine(
   char* buffer
   , char*& context
   , int& type
