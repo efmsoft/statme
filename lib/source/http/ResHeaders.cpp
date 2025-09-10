@@ -69,3 +69,12 @@ HEADER_ERROR ResHeaders::ParseResLine(Verification type)
 
   return HEADER_ERROR::NONE;
 }
+
+void ResHeaders::CopyTo(ResHeaders& to) const
+{
+  Headers::CopyTo(to);
+  
+  to.Protocol = Protocol;
+  to.Status = Status;
+  to.Reason = Reason;
+}

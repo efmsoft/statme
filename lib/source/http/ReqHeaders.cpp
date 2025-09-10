@@ -121,6 +121,16 @@ bool ReqHeaders::IsHeadRequest() const
   return Method == "HEAD";
 }
 
+void ReqHeaders::CopyTo(ReqHeaders& to) const
+{
+  Headers::CopyTo(to);
+
+  to.Method = Method;
+  to.Uri = Uri;
+  to.Protocol = Protocol;
+}
+
+
 HEADER_ERROR ReqHeaders::TryParse(std::string_view data)
 {
   if (data.empty())

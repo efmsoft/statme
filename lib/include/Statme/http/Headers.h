@@ -87,6 +87,8 @@ namespace HTTP
         , const std::string& def = std::string()
       ) const;
 
+      STATMELNK void CopyTo(Headers& to) const;
+
       STATMELNK static bool Complete(const std::vector<char>& data);
       STATMELNK static bool Complete(const char* data, size_t length);
       STATMELNK static size_t SizeOfHeader(const char* data, size_t length);
@@ -127,6 +129,7 @@ namespace HTTP
       STATMELNK HEADER_ERROR Parse(const char* data, size_t length, Verification type) override;
 
       STATMELNK bool IsHeadRequest() const;
+      STATMELNK void CopyTo(ReqHeaders& to) const;
 
       STATMELNK static HEADER_ERROR TryParse(std::string_view data);
 
@@ -145,6 +148,7 @@ namespace HTTP
 
       STATMELNK HEADER_ERROR Parse(const StreamData& data, Verification type) override;
       STATMELNK HEADER_ERROR Parse(const char* data, size_t length, Verification type) override;
+      STATMELNK void CopyTo(ResHeaders& to) const;
 
     private:
       HEADER_ERROR ParseResLine(Verification type);

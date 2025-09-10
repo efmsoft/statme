@@ -549,6 +549,27 @@ void Headers::AddHeader(const std::string& field, const std::string& value)
   }
 }
 
+void Headers::CopyTo(Headers& to) const
+{
+  to.Size = Size;
+  to.ReqRes = ReqRes;
+  to.Body = Body;
+  to.LowerCase = LowerCase;
+  to.LineEnding = LineEnding;
+  to.MixedLineEndings = MixedLineEndings;
+
+  for (auto it = Header.begin(); it != Header.end(); ++it)
+  {
+    auto& header = *it;
+
+    FieldPtr h = std::make_shared<Field>();
+    h->Key = header->Key;
+    h->Values = header->Values;
+    
+    to.Header.push_back(h);
+  }
+}
+
 bool Headers::Complete(const std::vector<char>& data)
 {
   return Complete(&data[0], data.size());
