@@ -424,7 +424,7 @@ std::string Headers::GetFirstValue(
   return (*arr)[0];
 }
 
-bool Headers::HasHeader(const std::string& field)
+bool Headers::HasHeader(const std::string& field) const
 {
   return FindHeader(field) != Header.end();
 }

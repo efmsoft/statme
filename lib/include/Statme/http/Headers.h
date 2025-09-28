@@ -78,7 +78,7 @@ namespace HTTP
       STATMELNK void AddHeader(const std::string& field, const std::string& value);
       STATMELNK void SetHeader(const std::string& field, const std::string& value);
       STATMELNK FieldList::const_iterator FindHeader(const std::string& field) const;
-      STATMELNK bool HasHeader(const std::string& field);
+      STATMELNK bool HasHeader(const std::string& field) const;
 
       STATMELNK std::string GetFirstValue(
         const std::string& field
