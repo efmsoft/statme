@@ -2,6 +2,7 @@
 
 #include <Statme/http/Headers.h>
 #include <Statme/http/Response/Formatter.h>
+#include <Statme/Macros.h>
 
 namespace HTTP
 {
@@ -13,12 +14,12 @@ namespace HTTP
       FormatterPtr Formatter;
 
     public:
-      Generator(int code, const std::string& phrase, const Version& ver = Version());
+      STATMELNK Generator(int code, const std::string& phrase, const Version& ver = Version());
 
-      void SetFormatter(FormatterPtr formatter);
+      STATMELNK void SetFormatter(FormatterPtr formatter);
       void SetContentType(const std::string& mime);
 
-      std::string Data() const;
+      STATMELNK std::string Data() const;
     };
 
     struct OK : public Generator
