@@ -416,9 +416,11 @@ std::string Broker::GetToken(const HTTP::Header::ReqHeaders& req)
   return std::string();
 }
 
-std::string Broker::ProcessRequest(
+bool Broker::ProcessRequest(
   const HTTP::Header::ReqHeaders& req
   , const std::string& peerIP
+  , std::string_view reqBody
+  , std::string& resBody
 )
 {
   using namespace HTTP::Response;
@@ -437,7 +439,8 @@ std::string Broker::ProcessRequest(
         UNAUTHORIZED unauthorized;
         unauthorized.Headers.SetHeader("WWW-Authenticate", "Basic realm=\"Authorization Required\"");
         unauthorized.Headers.SetHeader("Content-Length", "0");
-        return unauthorized.Data();
+        resBody = unauthorized.Data();
+        return true;
       }
 
       if (token.empty())
@@ -456,7 +459,8 @@ std::string Broker::ProcessRequest(
     if (!token.empty())
       redirect.Headers.SetHeader("Set-Cookie", cookie);
 
-    return redirect.Data();
+    resBody = redirect.Data();
+    return true;
   }
 
   StringArray url = SplitUrl(req.Uri);
@@ -466,7 +470,8 @@ std::string Broker::ProcessRequest(
     if (!token.empty())
       redirect.Headers.SetHeader("Set-Cookie", cookie);
 
-    return redirect.Data();
+    resBody = redirect.Data();
+    return true;
   }
 
   OK ok;
@@ -520,7 +525,10 @@ std::string Broker::ProcessRequest(
     
     TopicPtr topic = GetTopic(uri);
     if (topic == nullptr)
-      return NotFound.Data();
+    {
+      resBody = NotFound.Data();
+      return false;
+    }
 
     std::string arg1 = uri.size() > 1 ? uri[1] : "";
     std::string arg2 = uri.size() > 2 ? uri[2] : "";
@@ -537,7 +545,10 @@ std::string Broker::ProcessRequest(
     try
     {
       if (!topic->Print(*f, arg1, arg2))
-        return InternalServerError.Data();
+      {
+        resBody = InternalServerError.Data();
+        return true;
+      }
     }
     catch (const std::exception& ex)
     {
@@ -549,7 +560,8 @@ std::string Broker::ProcessRequest(
   if (!token.empty())
     ok.Headers.SetHeader("Set-Cookie", cookie);
   
-  return ok.Data();
+  resBody = ok.Data();
+  return true;
 }
 
 static SSL_CTX* CreateClientContext(X509* cert, EVP_PKEY* key)
@@ -626,6 +638,8 @@ static SSL* CreateClientSSL(SSL_CTX* ctx, int fd)
 
 void Broker::ConnectionWorker(int socket, int server_socket)
 {
+  using namespace HTTP::Response;
+
   const char* tName = "RT connection";
   if (server_socket != Socket)
     tName = "RT SSL connection";
@@ -692,10 +706,21 @@ void Broker::ConnectionWorker(int socket, int server_socket)
     if (req.Parse(rdata.c_str(), rdata.size(), vtype) != HEADER_ERROR::NONE)
       break;
 
-    if (req.Method != "GET" || req.Protocol.Major != 1)
-      break;
+    std::string res;
+    std::string_view reqBody(rdata);
+    reqBody.remove_prefix(pos);
+    
+    bool processed = false;
+    if (req.Method == "GET" && req.Protocol.Major == 1)
+    {
+      processed = ProcessRequest(req, pair.Client->Peer.IP, reqBody, res);
+    }
 
-    std::string res = ProcessRequest(req, pair.Client->Peer.IP);
+    if (!processed)
+    {
+      if (UnprocessedPrint && !UnprocessedPrint(req, reqBody, res))
+        res = NotFound.Data();
+    }
     pair.Client->WriteStr(res);
   }
 
@@ -705,4 +730,9 @@ void Broker::ConnectionWorker(int socket, int server_socket)
   if (clientContext)
     SSL_CTX_free(clientContext);
 
+}
+
+void Broker::RegisterUnprocessedTopic(TUnprocessedPrint print)
+{
+  UnprocessedPrint = std::move(print);
 }

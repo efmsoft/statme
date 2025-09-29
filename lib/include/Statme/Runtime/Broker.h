@@ -47,6 +47,8 @@ namespace Runtime
     X509* SSLCert;
     EVP_PKEY* SSLKey;
 
+    TUnprocessedPrint UnprocessedPrint;
+
   public:
     STATMELNK Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent);
     STATMELNK ~Broker();
@@ -54,6 +56,8 @@ namespace Runtime
     STATMELNK static BrokerPtr GetInstance();
     STATMELNK Cookie RegisterTopic(const char* name, TPrint print, const StringList& subtopics = StringList());
     STATMELNK void UnregisterTopic(Cookie);
+
+    STATMELNK void RegisterUnprocessedTopic(TUnprocessedPrint print);
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
     STATMELNK void SetLoginData(const std::string& login, const std::string& pass);
@@ -70,9 +74,11 @@ namespace Runtime
     void ConnectionWorker(int socket, int server_socket);
 
     bool AcceptsHtml(const HTTP::Header::ReqHeaders& req) const;
-    std::string ProcessRequest(
+    bool ProcessRequest(
       const HTTP::Header::ReqHeaders& req
       , const std::string& peerIP
+      , std::string_view reqBody
+      , std::string& resBody
     );
     std::string CreateToken(const std::string& peerIP) const;
     bool VerifyToken(const std::string& token, const std::string& peerIP) const;
@@ -94,3 +100,6 @@ namespace Runtime
 
 #define RUNTIME_TOPIC_UNREGISTER(c) \
   { if (Runtime::Broker::GetInstance() && c) { Runtime::Broker::GetInstance()->UnregisterTopic(c); } }
+
+#define RUNTIME_UNPROCESSED_TOPIC_REGISTER(p) \
+  { if (Runtime::Broker::GetInstance()) { Runtime::Broker::GetInstance()->RegisterUnprocessedTopic(p); } }
