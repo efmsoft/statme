@@ -153,3 +153,17 @@ a:visited, a:link {
     padding: 20px;
     margin: 10px;
 }
+.scriptedbutton {
+    margin: 8px;
+}
+fieldset.section {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: #FFFDEA;
+}
+fieldset.section legend {
+    padding: 0 8px;
+    font-weight: bold;
+    color: #333;
+}

@@ -2,6 +2,7 @@
 #include "Model/Drawable.h"
 #include "Model/Dropdown.h"
 #include "Model/Page.h"
+#include "Model/Panel.h"
 #include "Model/Paragraph.h"
 #include "Model/Raw.h"
 #include "Model/Screen.h"
