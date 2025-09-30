@@ -736,3 +736,8 @@ void Broker::RegisterUnprocessedTopic(TUnprocessedPrint print)
 {
   UnprocessedPrint = std::move(print);
 }
+
+void Broker::UnregisterUnprocessedTopic()
+{
+  UnprocessedPrint = nullptr;
+}
