@@ -58,6 +58,7 @@ namespace Runtime
     STATMELNK void UnregisterTopic(Cookie);
 
     STATMELNK void RegisterUnprocessedTopic(TUnprocessedPrint print);
+    STATMELNK void UnregisterUnprocessedTopic();
 
     STATMELNK void SetSocketConfig(Syncme::ConfigPtr config);
     STATMELNK void SetLoginData(const std::string& login, const std::string& pass);
@@ -103,3 +104,6 @@ namespace Runtime
 
 #define RUNTIME_UNPROCESSED_TOPIC_REGISTER(p) \
   { if (Runtime::Broker::GetInstance()) { Runtime::Broker::GetInstance()->RegisterUnprocessedTopic(p); } }
+
+#define RUNTIME_UNPROCESSED_TOPIC_UNREGISTER() \
+  { if (Runtime::Broker::GetInstance()) { Runtime::Broker::GetInstance()->UnregisterUnprocessedTopic(); } }
