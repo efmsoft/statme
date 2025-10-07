@@ -51,14 +51,32 @@ ParagraphImpl& ParagraphImpl::AppendAll(std::istream& is)
   return *this;
 }
 
+template <class F>
+void MakeMultiline(std::string_view str, size_t maxLen, F&& f)
+{
+  if (maxLen == 0)
+  {
+    f(str);
+    return;
+  }
+
+  for (size_t pos{}; pos < str.length(); pos += maxLen)
+  {
+    auto len = pos + maxLen <= str.length() ? maxLen : str.length() - pos;
+    f(str.substr(pos, len));
+  }
+}
+
 void ParagraphImpl::DrawAsText(IScreen& screen)
 {
   auto& screenImpl = dynamic_cast<ScreenImpl&>(screen);
   auto curX = screenImpl.GetCurPos().X;
   for (const auto& l : Lines)
   {
-    screenImpl.Write(l);
-    screenImpl.NextLine(curX);
+    MakeMultiline(l, Settings.LineLength, [&](std::string_view subLine) {
+      screenImpl.Write(subLine);
+      screenImpl.NextLine(curX);
+    });
   }
 }
 
