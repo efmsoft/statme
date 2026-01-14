@@ -1,6 +1,7 @@
 #include "Model/Button.h"
 #include "Model/Drawable.h"
 #include "Model/Dropdown.h"
+#include "Model/MasterDetail.h"
 #include "Model/Page.h"
 #include "Model/Panel.h"
 #include "Model/Paragraph.h"
