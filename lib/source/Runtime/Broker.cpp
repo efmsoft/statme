@@ -532,8 +532,8 @@ bool Broker::ProcessRequest(
 
     std::string arg1 = uri.size() > 1 ? uri[1] : "";
     std::string arg2 = uri.size() > 2 ? uri[2] : "";
-    
-    std::string rel = arg1.empty() ? "./" : "../";
+
+    std::string rel = arg1.empty() ? "./" : (arg2.empty() ? "../" : "../../");
     f->Rel = rel;
 
     f->AddTOCItem(false, "&#127968;", rel + "home");
