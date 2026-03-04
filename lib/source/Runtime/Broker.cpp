@@ -29,10 +29,11 @@
 using namespace Runtime;
 using namespace Syncme;
 
-Broker* Broker::Instance = nullptr;
+std::unordered_map<std::string, Broker*> Broker::Instances;
 
-Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
+Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent, const std::string& name)
   : Key(32)
+  , Name(name)
   , Pool(pool)
   , StopEvent(stopEvent)
   , Socket(-1)
@@ -45,22 +46,29 @@ Broker::Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent)
   , SSLCert(0)
   , SSLKey(0)
 {
-  Instance = this;
+  Instances.try_emplace(Name, this);
 
   GenerateKey();
 }
 
 Broker::~Broker()
 {
+  Instances.erase(Name);
   CloseSocket();
 }
 
 BrokerPtr Broker::GetInstance()
 {
-  if (Instance == nullptr)
+  return GetInstance("");
+}
+
+BrokerPtr Broker::GetInstance(const std::string& name)
+{
+  auto it = Instances.find(name);
+  if (it == Instances.end())
     return BrokerPtr();
 
-  return Instance->shared_from_this();
+  return it->second->shared_from_this();
 }
 
 void Broker::SetSocketConfig(Syncme::ConfigPtr config)

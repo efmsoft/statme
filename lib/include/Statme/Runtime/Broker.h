@@ -3,6 +3,7 @@
 #include <memory>
 #include <mutex>
 #include <stdint.h>
+#include <unordered_map>
 #include <vector>
 
 #include <openssl/ssl.h>
@@ -23,7 +24,8 @@ namespace Runtime
 
   class Broker : public std::enable_shared_from_this<Broker>
   {
-    static Broker* Instance;
+    static std::unordered_map<std::string, Broker*> Instances;
+    std::string Name;
 
     std::mutex Lock;
     TopicList Topics;
@@ -50,10 +52,11 @@ namespace Runtime
     TUnprocessedPrint UnprocessedPrint;
 
   public:
-    STATMELNK Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent);
+    STATMELNK Broker(Syncme::ThreadPool::Pool& pool, HEvent& stopEvent, const std::string& name = "");
     STATMELNK ~Broker();
 
     STATMELNK static BrokerPtr GetInstance();
+    STATMELNK static BrokerPtr GetInstance(const std::string& name);
     STATMELNK Cookie RegisterTopic(const char* name, TPrint print, const StringList& subtopics = StringList());
     STATMELNK void UnregisterTopic(Cookie);
 
@@ -107,3 +110,9 @@ namespace Runtime
 
 #define RUNTIME_UNPROCESSED_TOPIC_UNREGISTER() \
   { if (Runtime::Broker::GetInstance()) { Runtime::Broker::GetInstance()->UnregisterUnprocessedTopic(); } }
+
+#define RUNTIME_TOPIC_REGISTER_NAMED(broker, n, p, s) \
+  (Runtime::Broker::GetInstance(broker) ? Runtime::Broker::GetInstance(broker)->RegisterTopic(n, p, s) : nullptr)
+
+#define RUNTIME_TOPIC_UNREGISTER_NAMED(broker, c) \
+  { if (Runtime::Broker::GetInstance(broker) && c) { Runtime::Broker::GetInstance(broker)->UnregisterTopic(c); } }

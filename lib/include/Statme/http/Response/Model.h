@@ -1,4 +1,5 @@
 #include "Model/Button.h"
+#include "Model/Checkbox.h"
 #include "Model/Drawable.h"
 #include "Model/Dropdown.h"
 #include "Model/MasterDetail.h"
