@@ -8,7 +8,7 @@
 // Apache - 8K
 // Nginx - 4K - 8K
 // IIS - 8K - 16K
-// Tomcat - 8K – 48K
+// Tomcat - 8K - 48K
 // Node(< 13) - 8K; (> 13) - 16K
 #define MAX_HEADER_SIZE (48 * 1024)
 
