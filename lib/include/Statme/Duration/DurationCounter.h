@@ -43,6 +43,10 @@ public:
   STATMELNK void Reset();
   STATMELNK void Add(uint64_t duration);
 
+  // Locked read of the current min/max/avg/count. When `reset` is true the
+  // accumulator is zeroed atomically with the read (rolling-window stats).
+  STATMELNK DurationCounterValue Snapshot(bool reset = false);
+
   STATMELNK uint64_t Minimal() const;
   STATMELNK uint64_t Maximal() const;
   STATMELNK uint64_t Average() const;

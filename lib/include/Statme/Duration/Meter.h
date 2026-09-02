@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
+#include <type_traits>
 
 #include <Logme/Logme.h>
 #include <Statme/Duration/Calculator.h>
@@ -96,3 +98,14 @@ namespace Duration
 
 #define DURATION_TRACER(...) \
   Duration::Tracer _tracer(__FUNCTION__, __VA_ARGS__)
+
+// Lightweight alternative to DURATION_METER: a static DurationCounter that
+// aggregates every call plus a slow-call warning, without the per-call Meter
+// tree. `prefix` is any callable -> std::string (evaluated only when slow).
+#define DURATION_GUARD(warnMs, ch, prefix) \
+  static DurationCounter _dguard_dc(__FUNCTION__); \
+  Duration::Guard<std::decay_t<decltype(prefix)>> \
+    _dguard(__FUNCTION__, (warnMs), &_dguard_dc, (ch), (prefix))
+
+#define DURATION_GUARD_NOPFX(warnMs, ch) \
+  DURATION_GUARD(warnMs, ch, [] { return std::string(); })

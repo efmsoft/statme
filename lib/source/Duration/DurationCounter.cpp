@@ -79,6 +79,38 @@ void DurationCounter::Add(uint64_t spent)
   }
 }
 
+DurationCounterValue DurationCounter::Snapshot(bool reset)
+{
+  DurationCounterValue v;
+  v.Name = Name;
+
+  for (long i = 0;; Sleep(1), i++)
+  {
+    if (!atomic_exchange(&Lock, true))
+    {
+      v.Min = MinSet ? Min : 0;
+      v.Max = Max;
+      v.Avg = Num ? Sum / Num : 0;
+      v.Sampling = Num;
+
+      if (reset)
+      {
+        Min = 0;
+        MinSet = false;
+        Max = 0;
+        Sum = 0;
+        Num = 0;
+      }
+
+      atomic_exchange(&Lock, false);
+      break;
+    }
+    assert(i < 100);
+  }
+
+  return v;
+}
+
 uint64_t DurationCounter::Minimal() const
 {
   return Min;
