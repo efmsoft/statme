@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include <cassert>
+#include <iterator>
 #include <zlib.h>
 
 #include <Logme/Logme.h>
@@ -85,7 +86,9 @@ CounterPtr Manager::AddCounter(
 
   CounterPtr counter = std::make_shared<Counter>(this, name, category);
   Counters.push_back(counter);
-  
+  counter->SelfIt = std::prev(Counters.end());
+  counter->Registered = true;
+
   SetDirty();
 
   return counter;
@@ -95,17 +98,14 @@ void Manager::DeleteCounter(CounterPtr counter)
 {
   std::lock_guard guard(Lock);
 
-  for (auto it = Counters.begin(); it != Counters.end(); ++it)
-  {
-    if (counter.get() == it->get())
-    {
-      Counters.erase(it);
-      counter->Deleted = GetTimeInMillisec();
+  if (counter == nullptr || !counter->Registered)
+    return;
 
-      SetEvent(DeletedEvent);
-      break;
-    }
-  }
+  Counters.erase(counter->SelfIt);
+  counter->Registered = false;
+  counter->Deleted = GetTimeInMillisec();
+
+  SetEvent(DeletedEvent);
 }
 
 bool Manager::Start(int port)

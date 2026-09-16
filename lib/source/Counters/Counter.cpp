@@ -19,6 +19,7 @@ Counter::Counter(
   , Pointer(pointer)
   , Category(category)
   , Owner(owner)
+  , Registered(false)
   , ID(0)
 {
   ID = ++IDGenerator;
