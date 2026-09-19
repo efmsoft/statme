@@ -2,6 +2,7 @@
 #include <cassert>
 #include <format>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string.h>
 
@@ -9,8 +10,6 @@
 
 #ifndef _WIN32
 #define strtok_s strtok_r
-#else
-#define strcasecmp _stricmp
 #endif
 
 using namespace HTTP::Header;
@@ -25,6 +24,36 @@ Headers::Headers(bool lowerCase)
 {
 }
 
+Headers::Headers(const Headers& other)
+  : Size(other.Size)
+  , ReqRes(other.ReqRes)
+  , Header(other.Header)
+  , Body(other.Body)
+  , LowerCase(other.LowerCase)
+  , MixedLineEndings(other.MixedLineEndings)
+  , LineEnding(other.LineEnding)
+{
+  RebuildIndex();
+}
+
+Headers& Headers::operator=(const Headers& other)
+{
+  if (this == &other)
+    return *this;
+
+  Size = other.Size;
+  ReqRes = other.ReqRes;
+  Header = other.Header;
+  Body = other.Body;
+  LowerCase = other.LowerCase;
+  MixedLineEndings = other.MixedLineEndings;
+  LineEnding = other.LineEnding;
+
+  RebuildIndex();
+
+  return *this;
+}
+
 Headers::~Headers()
 {
 }
@@ -37,9 +66,24 @@ bool Headers::Empty() const
 void Headers::Clear()
 {
   Header.clear();
+  Index.clear();
   ReqRes.clear();
   Body.clear();
   Size = 0;
+}
+
+std::string Headers::NormalizeKey(const std::string& key)
+{
+  std::string k(key);
+  std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+  return k;
+}
+
+void Headers::RebuildIndex()
+{
+  Index.clear();
+  for (auto it = Header.begin(); it != Header.end(); ++it)
+    Index[NormalizeKey(it->Key)] = it;
 }
 
 const char* Headers::sstrtok(
@@ -228,6 +272,7 @@ HEADER_ERROR Headers::Parse(
 {
   ReqRes.clear();
   Header.clear();
+  Index.clear();
 
   Size = SizeOfHeader(data, length);
   if (long(Size) < 0)
@@ -255,9 +300,11 @@ HEADER_ERROR Headers::Parse(
     if (!p)
       return HEADER_ERROR::INVALID;
 
-    char* ctx2 = nullptr;
-    std::string name = sstrtok(line, ":", &ctx2);
-    std::string val = sstrtok(nullptr, "", &ctx2);
+    // p already found the first ':' -- building name/val directly from it
+    // avoids strtok_s() re-scanning the same line a second time just to
+    // find the colon it was already given.
+    std::string name(line, p - line);
+    std::string val(p + 1);
 
     name.erase(0, name.find_first_not_of(" "));
     name.erase(name.find_last_not_of(" ") + 1);
@@ -300,13 +347,12 @@ std::string Headers::ToString(
     str += "\r\n";
   }
 
-  for (auto it = Header.begin(); it != Header.end(); ++it)
+  for (auto& header : Header)
   {
-    auto& header = *it;
-    for (auto& v : header->Values)
+    for (auto& v : header.Values)
     {
       str += indent;
-      str += header->Key;
+      str += header.Key;
       str += ": ";
       str += v;
       str += "\r\n";
@@ -417,6 +463,26 @@ std::string Headers::GetFirstValue(
   , const std::string& def
 ) const
 {
+  // The splitter-less case (every real call site in the codebase omits it)
+  // only ever wants Values[0], but routing it through GetHeader() allocates
+  // a whole StringArrayPtr and copies every value into it via PushValue()
+  // just to discard everything past index 0. Read the field's own Values
+  // directly instead -- this is the hot path (~20 call sites, at least
+  // once per request/response), so the allocation this skips is real.
+  if (!splitter)
+  {
+    auto it = FindHeader(field);
+    if (it == Header.end() || it->Values.empty())
+      return def;
+
+    if (!lowercase)
+      return it->Values[0];
+
+    std::string v(it->Values[0]);
+    std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+    return v;
+  }
+
   StringArrayPtr arr = GetHeader(field, lowercase, splitter);
   if (arr == nullptr || arr->empty())
     return def;
@@ -434,18 +500,21 @@ FieldList::const_iterator Headers::FindHeader(
 ) const
 {
   // 4.2 Message Headers
-  // HTTP header fields, which include general - header(section 4.5), request - 
-  // header(section 5.3), response - header(section 6.2), and entity - header(section 7.1) 
+  // HTTP header fields, which include general - header(section 4.5), request -
+  // header(section 5.3), response - header(section 6.2), and entity - header(section 7.1)
   // fields, follow the same generic format as that given in Section 3.1 of RFC 822[9].
   // Each header field consists of a name followed by a colon(":") and the field value.
   // Field names are -----> case-insensitive <-------.
-  for (auto it = Header.begin(); it != Header.end(); ++it)
-  {
-    const std::string& key = (*it)->Key;
-    if (!strcasecmp(field.c_str(), key.c_str()))
-      return it;
-  }
-  return Header.end();
+  //
+  // Index (name -> iterator into Header, kept up to date by every mutator)
+  // turns this into an O(1) lookup; without it, AddHeader-during-Parse was
+  // O(n^2) in the number of header lines, and there is no cap on header
+  // count under the 48KB header block limit (VTune, 2026-09).
+  auto it = Index.find(NormalizeKey(field));
+  if (it == Index.end())
+    return Header.end();
+
+  return it->second;
 }
 
 void Headers::PushValue(StringArrayPtr arr, const std::string& value, bool lowercase)
@@ -472,7 +541,7 @@ StringArrayPtr Headers::GetHeader(
     return StringArrayPtr();
 
   StringArrayPtr arr = std::make_shared<StringArray>();
-  for (std::string v : (*it)->Values)
+  for (std::string v : it->Values)
   {
     if (splitter)
     {
@@ -500,6 +569,7 @@ void Headers::DeleteHeader(const std::string& field)
   if (it == Header.end())
     return;
 
+  Index.erase(NormalizeKey(field));
   Header.erase(it);
 }
 
@@ -517,15 +587,20 @@ void Headers::SetHeader(
 
   if (it != Header.end())
   {
-    (*it)->Values.clear();
-    (*it)->Values.push_back(value);
+    // FindHeader is `const` (shared with the read-only lookups below), so it
+    // hands back a const_iterator; the pointee is a field of this Headers'
+    // own non-const Header list, so mutating through it here is well-defined.
+    Field& f = const_cast<Field&>(*it);
+    f.Values.clear();
+    f.Values.push_back(value);
   }
   else
   {
-    FieldPtr header = std::make_shared<Field>();
-    header->Key = key;
-    header->Values.push_back(value);
-    Header.push_back(header);
+    Field header;
+    header.Key = key;
+    header.Values.push_back(value);
+    Header.push_back(std::move(header));
+    Index[NormalizeKey(field)] = std::prev(Header.end());
   }
 }
 
@@ -539,13 +614,14 @@ void Headers::AddHeader(const std::string& field, const std::string& value)
   auto it = FindHeader(field);
 
   if (it != Header.end())
-    (*it)->Values.push_back(value);
+    const_cast<Field&>(*it).Values.push_back(value);
   else
   {
-    FieldPtr header = std::make_shared<Field>();
-    header->Key = key;
-    header->Values.push_back(value);
-    Header.push_back(header);
+    Field header;
+    header.Key = key;
+    header.Values.push_back(value);
+    Header.push_back(std::move(header));
+    Index[NormalizeKey(field)] = std::prev(Header.end());
   }
 }
 
@@ -558,16 +634,8 @@ void Headers::CopyTo(Headers& to) const
   to.LineEnding = LineEnding;
   to.MixedLineEndings = MixedLineEndings;
 
-  for (auto it = Header.begin(); it != Header.end(); ++it)
-  {
-    auto& header = *it;
-
-    FieldPtr h = std::make_shared<Field>();
-    h->Key = header->Key;
-    h->Values = header->Values;
-    
-    to.Header.push_back(h);
-  }
+  to.Header = Header;
+  to.RebuildIndex();
 }
 
 bool Headers::Complete(const std::vector<char>& data)

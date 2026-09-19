@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <Statme/http/Find2CRLF.h>
@@ -30,8 +31,11 @@ namespace HTTP
       Strict
     };
 
-    typedef std::shared_ptr<Field> FieldPtr;
-    typedef std::list<FieldPtr> FieldList;
+    // Plain values, not shared_ptr<Field>: nothing outside a FieldList ever
+    // held a Field by itself, so the shared_ptr bought only an extra
+    // allocation per header field on every AddHeader/SetHeader/CopyTo call
+    // (VTune, 2026-09).
+    typedef std::list<Field> FieldList;
 
     struct Headers
     {
@@ -46,6 +50,15 @@ namespace HTTP
 
     public:
       STATMELNK Headers(bool lowerCase);
+
+      // Header carries an auxiliary name->iterator Index (see FindHeader);
+      // its iterators point into THIS object's Header list, so a copy must
+      // rebuild its own Index instead of copying the source's iterators
+      // verbatim (ReqHeaders/ResHeaders inherit these -- e.g. Req = req in
+      // DataStream::ImportHeaders, UpgradeSettings.Req = CurReq->Req).
+      STATMELNK Headers(const Headers& other);
+      STATMELNK Headers& operator=(const Headers& other);
+
       STATMELNK virtual ~Headers();
 
       STATMELNK virtual HEADER_ERROR Parse(const StreamData& data, Verification type);
@@ -114,6 +127,14 @@ namespace HTTP
         , char*& context
         , int& type
       );
+
+      // FindHeader is a case-insensitive lookup, so the index key is always
+      // the lowercased field name, independent of this object's own
+      // LowerCase (wire-cased Headers still get a lowercased index key).
+      static std::string NormalizeKey(const std::string& key);
+      void RebuildIndex();
+
+      std::unordered_map<std::string, FieldList::iterator> Index;
     };
 
     struct ReqHeaders : public Headers 

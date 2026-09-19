@@ -52,8 +52,8 @@ std::string Generator::Data() const
     << "\r\n";
 
   for (auto& h : Headers.Header)
-    for (auto& v : h->Values)
-      ss << h->Key << ": " << v << "\r\n";
+    for (auto& v : h.Values)
+      ss << h.Key << ": " << v << "\r\n";
 
   if (!content.empty())
     ss << "Content-Length: " << std::to_string(content.size()) << "\r\n";
