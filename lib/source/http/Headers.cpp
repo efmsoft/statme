@@ -583,14 +583,17 @@ void Headers::SetHeader(
   if (LowerCase)
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-  auto it = FindHeader(field);
+  // Normalize once and reuse it for both the lookup and the insert below,
+  // instead of going through FindHeader() (which normalizes field for the
+  // lookup) and then normalizing field again for Index[...] -- two
+  // allocation+tolower passes over the same string on every new header
+  // (VTune, 2026-09).
+  std::string normalized = NormalizeKey(field);
+  auto it = Index.find(normalized);
 
-  if (it != Header.end())
+  if (it != Index.end())
   {
-    // FindHeader is `const` (shared with the read-only lookups below), so it
-    // hands back a const_iterator; the pointee is a field of this Headers'
-    // own non-const Header list, so mutating through it here is well-defined.
-    Field& f = const_cast<Field&>(*it);
+    Field& f = *it->second;
     f.Values.clear();
     f.Values.push_back(value);
   }
@@ -600,7 +603,7 @@ void Headers::SetHeader(
     header.Key = key;
     header.Values.push_back(value);
     Header.push_back(std::move(header));
-    Index[NormalizeKey(field)] = std::prev(Header.end());
+    Index[std::move(normalized)] = std::prev(Header.end());
   }
 }
 
@@ -611,17 +614,20 @@ void Headers::AddHeader(const std::string& field, const std::string& value)
   if (LowerCase)
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-  auto it = FindHeader(field);
+  // See SetHeader(): normalize once, reuse for both the lookup and the
+  // insert (VTune, 2026-09).
+  std::string normalized = NormalizeKey(field);
+  auto it = Index.find(normalized);
 
-  if (it != Header.end())
-    const_cast<Field&>(*it).Values.push_back(value);
+  if (it != Index.end())
+    it->second->Values.push_back(value);
   else
   {
     Field header;
     header.Key = key;
     header.Values.push_back(value);
     Header.push_back(std::move(header));
-    Index[NormalizeKey(field)] = std::prev(Header.end());
+    Index[std::move(normalized)] = std::prev(Header.end());
   }
 }
 
