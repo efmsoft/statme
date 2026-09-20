@@ -21,9 +21,19 @@ namespace Duration
 
     CritSection Lock;
     ThreadDataMap Map;
+    bool Enabled;
 
   public:
     STATMELNK Meter();
+
+    // Lets an owner that already knows, once per object rather than once
+    // per call, that nobody will ever consult this Meter's PrintResults()
+    // (e.g. a request/connection object whose logging channel was decided
+    // to be a no-op) skip StartMeasurement's lock+map lookup+allocation
+    // entirely instead of building a Measurement tree that would just be
+    // thrown away (VTune, 2026-09). Defaults to true -- existing callers
+    // that never call this see no behavior change.
+    STATMELNK void SetEnabled(bool enabled);
 
     STATMELNK CalculatorPtr StartMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);
     STATMELNK static CalculatorPtr StartThreadMeasurement(DurationCounter& dc, const char* name, uint64_t* pthreadid = nullptr);

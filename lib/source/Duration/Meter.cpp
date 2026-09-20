@@ -10,7 +10,13 @@ std::mutex Meter::ThreadMapLock;
 std::map<uint64_t, Meter*> Meter::ThreadMap;
 
 Meter::Meter()
+  : Enabled(true)
 {
+}
+
+void Meter::SetEnabled(bool enabled)
+{
+  Enabled = enabled;
 }
 
 Meter* Meter::SetThreadObject(Meter* o)
@@ -67,6 +73,9 @@ CalculatorPtr Meter::StartMeasurement(
   , uint64_t* pthreadid
 )
 {
+  if (!Enabled)
+    return CalculatorPtr();
+
   auto id = pthreadid ? *pthreadid : GetCurrentThreadId();
   auto lock = Lock.Lock();
 
