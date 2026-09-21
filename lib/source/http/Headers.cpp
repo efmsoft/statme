@@ -81,9 +81,13 @@ std::string Headers::NormalizeKey(const std::string& key)
 
 void Headers::RebuildIndex()
 {
+  // Every Field already carries its own NormalizedKey (set once at
+  // AddHeader/SetHeader time and copied along with the rest of the field
+  // by whatever copied Header before calling this) -- no need to
+  // recompute it here.
   Index.clear();
   for (auto it = Header.begin(); it != Header.end(); ++it)
-    Index[NormalizeKey(it->Key)] = it;
+    Index[it->NormalizedKey] = it;
 }
 
 const char* Headers::sstrtok(
@@ -601,6 +605,7 @@ void Headers::SetHeader(
   {
     Field header;
     header.Key = key;
+    header.NormalizedKey = normalized;
     header.Values.push_back(value);
     Header.push_back(std::move(header));
     Index[std::move(normalized)] = std::prev(Header.end());
@@ -625,6 +630,7 @@ void Headers::AddHeader(const std::string& field, const std::string& value)
   {
     Field header;
     header.Key = key;
+    header.NormalizedKey = normalized;
     header.Values.push_back(value);
     Header.push_back(std::move(header));
     Index[std::move(normalized)] = std::prev(Header.end());

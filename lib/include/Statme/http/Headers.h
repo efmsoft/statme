@@ -23,6 +23,14 @@ namespace HTTP
     {
       std::string Key;
       StringArray Values;
+
+      // NormalizeKey(Key), stashed at insertion time (AddHeader/SetHeader)
+      // so RebuildIndex() -- called on every copy/assignment of a Headers
+      // object, e.g. HTTP1_1::CopyRequest on every response validation
+      // pass -- can read it back directly instead of recomputing it (a
+      // string copy + full tolower pass) for every field on every copy
+      // (VTune, 2026-09).
+      std::string NormalizedKey;
     };
 
     enum class Verification
