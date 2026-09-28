@@ -19,6 +19,16 @@ namespace Duration
     static std::mutex ThreadMapLock;
     static std::map<uint64_t, Meter*> ThreadMap;
 
+    // Every real call site (THREAD_DURATION_METER()) queries/sets the
+    // CALLING thread's own Meter*, via a null pthreadid -- SetThreadObject()
+    // itself only ever writes the current thread's id, and nothing in this
+    // codebase passes a non-null pthreadid to ask about a different thread.
+    // GetThreadObject(nullptr) can therefore read this thread_local directly
+    // instead of taking ThreadMapLock and walking ThreadMap, which used to
+    // run on every single measurement (VTune, 2026-09). ThreadMap is still
+    // kept in sync, for the explicit-pthreadid path.
+    static thread_local Meter* CurrentThreadObject;
+
     CritSection Lock;
     ThreadDataMap Map;
     bool Enabled;

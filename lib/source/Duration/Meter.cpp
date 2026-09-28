@@ -8,6 +8,7 @@ using namespace Duration;
 
 std::mutex Meter::ThreadMapLock;
 std::map<uint64_t, Meter*> Meter::ThreadMap;
+thread_local Meter* Meter::CurrentThreadObject = nullptr;
 
 Meter::Meter()
   : Enabled(true)
@@ -21,14 +22,14 @@ void Meter::SetEnabled(bool enabled)
 
 Meter* Meter::SetThreadObject(Meter* o)
 {
-  Meter* prev = nullptr;
+  Meter* prev = CurrentThreadObject;
+  CurrentThreadObject = o;
+
   auto id = GetCurrentThreadId();
 
   std::lock_guard<std::mutex> guard(ThreadMapLock);
 
   auto it = ThreadMap.find(id);
-  if (it != ThreadMap.end())
-    prev = it->second;
 
   if (o)
     ThreadMap[id] = o;
@@ -40,11 +41,12 @@ Meter* Meter::SetThreadObject(Meter* o)
 
 Meter* Meter::GetThreadObject(uint64_t* pthreadid)
 {
-  auto id = pthreadid ? *pthreadid : GetCurrentThreadId();
+  if (!pthreadid)
+    return CurrentThreadObject;
 
   std::lock_guard<std::mutex> guard(ThreadMapLock);
-  
-  auto it = ThreadMap.find(id);
+
+  auto it = ThreadMap.find(*pthreadid);
   if (it == ThreadMap.end())
     return nullptr;
 
