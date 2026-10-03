@@ -246,13 +246,6 @@ char* Headers::ExtractHeaderLine(
       return buffer;
     }
 
-    // SenseType() picks '\n' when bare LFs outnumber CRLFs, but a few lines
-    // of a mixed buffer may still end in CRLF (e.g. a CRLF status line
-    // followed by LF-only headers). Their CR is part of the separator, not
-    // of the line.
-    if (p > buffer && p[-1] == '\r')
-      p[-1] = '\0';
-
     *p = '\0';
     context = p + 1;
     return buffer;
@@ -621,51 +614,26 @@ void Headers::SetHeader(
 
 void Headers::AddHeader(const std::string& field, const std::string& value)
 {
-  // One hash lookup for both outcomes: try_emplace either finds the existing
-  // entry (a repeated header name -- just another value) or inserts the new
-  // name with a placeholder iterator, which is filled in below once the
-  // Field exists. The old code looked the name up, and for a new header
-  // looked it up AGAIN to insert it; it also built the wire-cased key (a
-  // copy plus a transform) before knowing whether it would be used at all,
-  // and assembled the Field in a temporary that was then moved into the
-  // list.
-  //
-  // Index and Header must stay in step, so a failure after the placeholder
-  // went in (allocation for the list node or a string) takes both the
-  // placeholder and any half-added Field back out before propagating.
-  auto [indexIt, inserted] = Index.try_emplace(NormalizeKey(field));
+  std::string key(field);
 
-  if (!inserted)
+  if (LowerCase)
+    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+  // See SetHeader(): normalize once, reuse for both the lookup and the
+  // insert (VTune, 2026-09).
+  std::string normalized = NormalizeKey(field);
+  auto it = Index.find(normalized);
+
+  if (it != Index.end())
+    it->second->Values.push_back(value);
+  else
   {
-    indexIt->second->Values.push_back(value);
-    return;
-  }
-
-  bool listed = false;
-
-  try
-  {
-    Header.emplace_back();
-    listed = true;
-
-    Field& header = Header.back();
-    header.Key = field;
-
-    if (LowerCase)
-      std::transform(header.Key.begin(), header.Key.end(), header.Key.begin(), ::tolower);
-
-    header.NormalizedKey = indexIt->first;
+    Field header;
+    header.Key = key;
+    header.NormalizedKey = normalized;
     header.Values.push_back(value);
-
-    indexIt->second = std::prev(Header.end());
-  }
-  catch (...)
-  {
-    if (listed)
-      Header.pop_back();
-
-    Index.erase(indexIt);
-    throw;
+    Header.push_back(std::move(header));
+    Index[std::move(normalized)] = std::prev(Header.end());
   }
 }
 
