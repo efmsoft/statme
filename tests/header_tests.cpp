@@ -779,3 +779,51 @@ TEST(header_tests, random_operations_match_a_model)
   ExpectTerminated(h);
   ExpectTerminated(copy);
 }
+
+// The nodes of a parsed block are carved from an area sized from the number of
+// line ends in it. Whatever the block looks like -- mixed line endings, empty
+// names, lines without a colon, blanks -- Parse() must stay inside it: it
+// reports an error or parses, it never runs out of room (which would throw).
+TEST(header_tests, random_blocks_never_overflow_the_node_area)
+{
+  std::mt19937 rng(424242);
+  const std::string alphabet = "aAbB:: \t\r\n\n\r-";
+
+  for (int round = 0; round < 30000; ++round)
+  {
+    std::string text;
+    const size_t length = rng() % 160;
+    for (size_t i = 0; i < length; ++i)
+    {
+      text += alphabet[rng() % alphabet.size()];
+    }
+
+    switch (rng() % 3)
+    {
+    case 0:
+      text += "\r\n\r\n";
+      break;
+
+    case 1:
+      text += "\n\n";
+      break;
+
+    default:
+      text += "\r\n\n";
+      break;
+    }
+
+    Headers h(rng() % 2 == 0);
+    HEADER_ERROR error = HEADER_ERROR::NONE;
+    const Verification type = rng() % 2 ? Verification::Strict : Verification::NotStrict;
+
+    ASSERT_NO_THROW(error = h.Parse(text.c_str(), text.size(), type)) << "round " << round;
+
+    if (error == HEADER_ERROR::NONE)
+    {
+      Headers copy(h);
+      ASSERT_EQ(copy.ToString(), h.ToString()) << "round " << round;
+      ExpectTerminated(h);
+    }
+  }
+}

@@ -39,7 +39,8 @@ namespace HTTP
 
     // The values of one field, in the order they were added. Looks like the
     // std::vector<std::string> it replaces (size/empty/[]/front/range-for),
-    // but yields std::string_view.
+    // but yields std::string_view. The first value is stored in the list
+    // itself, so a field with one value (nearly all of them) is one node.
     class ValueList
     {
     public:
@@ -70,18 +71,37 @@ namespace HTTP
 
       typedef const_iterator iterator;
 
-      ValueList() : First(nullptr), Last(nullptr), Count(0) {}
+      ValueList() : Head(), Last(&Head) {}
 
-      bool empty() const { return First == nullptr; }
-      size_t size() const { return Count; }
+      // Last points into this very object.
+      ValueList(const ValueList&) = delete;
+      ValueList& operator=(const ValueList&) = delete;
 
-      const std::string_view& front() const { return First->Text; }
-      const std::string_view& back() const { return Last->Text; }
+      // Only a field that is still being built has no value.
+      bool empty() const { return Head.Text.data() == nullptr; }
 
       // O(n) -- a field rarely has more than one value.
+      size_t size() const
+      {
+        size_t count = 0;
+        if (!empty())
+        {
+          for (const FieldValue* node = &Head; node; node = node->Next)
+          {
+            ++count;
+          }
+        }
+
+        return count;
+      }
+
+      const std::string_view& front() const { return Head.Text; }
+      const std::string_view& back() const { return Last->Text; }
+
+      // O(n) as well.
       const std::string_view& operator[](size_t index) const
       {
-        const FieldValue* node = First;
+        const FieldValue* node = &Head;
         while (index--)
         {
           node = node->Next;
@@ -90,30 +110,14 @@ namespace HTTP
         return node->Text;
       }
 
-      const_iterator begin() const { return const_iterator(First); }
+      const_iterator begin() const { return empty() ? end() : const_iterator(&Head); }
       const_iterator end() const { return const_iterator(nullptr); }
 
     private:
       friend struct Headers;
 
-      FieldValue* First;
-      FieldValue* Last;
-      size_t Count;
-
-      void Append(FieldValue* node)
-      {
-        if (Last)
-        {
-          Last->Next = node;
-        }
-        else
-        {
-          First = node;
-        }
-
-        Last = node;
-        ++Count;
-      }
+      FieldValue Head; // the first value
+      FieldValue* Last; // the last one: where the next value is appended
     };
 
     class FieldList;
@@ -129,14 +133,13 @@ namespace HTTP
       std::string_view Key;
       ValueList Values;
 
-      Field() : Next(nullptr), Prev(nullptr), Hash(0), Capacity(0) {}
+      Field() : Next(nullptr), Hash(0), Capacity(0) {}
 
     private:
       friend struct Headers;
       friend class FieldList;
 
       Field* Next;
-      Field* Prev;
       uint32_t Hash; // case-insensitive hash of Key
 
       // Room (without the NUL) in the buffer holding the text of the first
@@ -211,13 +214,15 @@ namespace HTTP
 
     // Header fields are not allocated one by one. Parse() copies the received
     // block once, puts a NUL after every key and every value inside that copy
-    // and builds the Field/FieldValue nodes in the same allocation, so a
-    // parsed message costs one allocation however many headers it has.
-    // Whatever is added afterwards (AddHeader/SetHeader) goes into 4K arenas
-    // allocated on demand. Blocks never move and are only released by
-    // Clear()/Parse()/destructor, which is why Key/Text views, Field
-    // pointers and FieldList iterators stay valid until then. A view of a
-    // value is invalidated by SetHeader/DeleteHeader of its own field.
+    // and builds the Field/FieldValue nodes in the same allocation (in front
+    // of the text, at most one 64-byte node per header line), so a parsed
+    // message costs one allocation however many headers it has. Whatever is
+    // added afterwards (AddHeader/SetHeader) goes into what is left of that
+    // allocation, then into 4K arenas allocated on demand. Memory never
+    // moves and is only released by Clear()/Parse()/destructor, which is why
+    // Key/Text views, Field pointers and FieldList iterators stay valid until
+    // then. A view of a value is invalidated by SetHeader/DeleteHeader of its
+    // own field.
     struct Headers
     {
       size_t Size;
@@ -306,11 +311,14 @@ namespace HTTP
         , int& type
       );
 
-      struct Block;
+      // Memory obtained after the first block, chained newest first. Its
+      // first bytes are the link; the rest is the arena.
+      struct Arena;
 
       // More fields than this get a hash table in front of the list; up to
-      // this many a scan of the list is faster than hashing.
-      static constexpr size_t IndexThreshold = 16;
+      // this many a scan of the list (one integer compare per field) is as
+      // fast as hashing and costs no allocation.
+      static constexpr size_t IndexThreshold = 64;
 
       // Size of the arena allocated when AddHeader/SetHeader run out of room.
       static constexpr size_t ArenaSize = 4096;
@@ -319,7 +327,10 @@ namespace HTTP
       // that can be carved after unaligned text.
       static constexpr size_t NodePadding = 16;
 
-      Block* Blocks; // newest first, all released by ClearFields()
+      // The block Parse()/a copy allocates: [nodes][text], nothing else.
+      char* Primary;
+
+      Arena* Arenas; // all released by ClearFields()
 
       // Free tail of the newest block that new nodes and text are carved
       // from. Only this object ever writes there: a copy gets blocks of its
@@ -336,10 +347,15 @@ namespace HTTP
       // stay occupied for probing until the table is rebuilt.
       size_t Tombstones;
 
+      // While Parse() runs: the most fields it can still add. A table built
+      // in the middle of it is made big enough for all of them at once
+      // instead of growing (and being reallocated) along the way.
+      size_t IndexHint;
+
       void ClearFields();
       void AssignFields(const Headers& other);
 
-      char* NewBlock(size_t bytes);
+      char* NewArena(size_t bytes);
       char* NewLayout(size_t nodeBytes, size_t textBytes);
       void Reserve(size_t bytes);
       void* TakeNode(size_t size);
@@ -354,6 +370,7 @@ namespace HTTP
       void AddStored(std::string_view storedKey, std::string_view storedValue);
       void IndexField(Field* field);
       void BuildTable();
+      Field* FindPrevious(const Field* field) const;
     };
 
     struct ReqHeaders : public Headers

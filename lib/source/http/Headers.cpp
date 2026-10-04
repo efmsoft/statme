@@ -56,6 +56,10 @@ namespace
 
   static_assert(alignof(Field) <= NodeAlignment && alignof(FieldValue) <= NodeAlignment);
 
+  // The per-header budget the allocation tests hold the parse to: one Field
+  // per header line, nothing else.
+  static_assert(sizeof(Field) <= 64, "a Field is the whole per-header cost of Parse()");
+
   // Marks a table slot whose field was deleted: probing goes on past it.
   Field* Tombstone()
   {
@@ -86,10 +90,11 @@ namespace
   }
 }
 
-struct alignas(16) Headers::Block
+// Header of an arena (memory taken after the first block); the memory handed
+// out by NewArena() follows it. The first block has no header at all.
+struct alignas(16) Headers::Arena
 {
-  Block* Prev;
-  // The memory handed out by NewBlock() follows the block header.
+  Arena* Prev;
 };
 
 Headers::Headers(bool lowerCase)
@@ -97,10 +102,12 @@ Headers::Headers(bool lowerCase)
   , LowerCase(lowerCase)
   , MixedLineEndings(false)
   , LineEnding('\r\n')
-  , Blocks(nullptr)
+  , Primary(nullptr)
+  , Arenas(nullptr)
   , Cur(nullptr)
   , End(nullptr)
   , Tombstones(0)
+  , IndexHint(0)
 {
 }
 
@@ -111,10 +118,12 @@ Headers::Headers(const Headers& other)
   , LowerCase(other.LowerCase)
   , MixedLineEndings(other.MixedLineEndings)
   , LineEnding(other.LineEnding)
-  , Blocks(nullptr)
+  , Primary(nullptr)
+  , Arenas(nullptr)
   , Cur(nullptr)
   , End(nullptr)
   , Tombstones(0)
+  , IndexHint(0)
 {
   AssignFields(other);
 }
@@ -158,14 +167,17 @@ void Headers::Clear()
 
 void Headers::ClearFields()
 {
-  for (Block* block = Blocks; block;)
+  for (Arena* arena = Arenas; arena;)
   {
-    Block* prev = block->Prev;
-    ::operator delete(block);
-    block = prev;
+    Arena* prev = arena->Prev;
+    ::operator delete(arena);
+    arena = prev;
   }
 
-  Blocks = nullptr;
+  ::operator delete(Primary);
+
+  Primary = nullptr;
+  Arenas = nullptr;
   Cur = nullptr;
   End = nullptr;
 
@@ -177,14 +189,21 @@ void Headers::ClearFields()
   Header.Count = 0;
 }
 
-char* Headers::NewBlock(size_t bytes)
+char* Headers::NewArena(size_t bytes)
 {
-  void* memory = ::operator new(sizeof(Block) + bytes);
-  Block* block = new (memory) Block{Blocks};
+  // sizeof(Arena) + bytes must not wrap around: the Arena header below is
+  // written into the allocation, and a wrapped (tiny) size would be overrun.
+  if (bytes > SIZE_MAX - sizeof(Arena))
+  {
+    throw std::bad_alloc();
+  }
 
-  char* data = reinterpret_cast<char*>(block + 1);
+  void* memory = ::operator new(sizeof(Arena) + bytes);
+  Arena* arena = new (memory) Arena{Arenas};
 
-  Blocks = block;
+  char* data = reinterpret_cast<char*>(arena + 1);
+
+  Arenas = arena;
   Cur = data;
   End = data + bytes;
 
@@ -193,10 +212,19 @@ char* Headers::NewBlock(size_t bytes)
 
 char* Headers::NewLayout(size_t nodeBytes, size_t textBytes)
 {
-  // One block laid out as [nodes][text]. Cur/End are left covering the node
-  // area only: whatever the nodes do not use is what AddHeader/SetHeader can
-  // still carve from, while the text area is full by construction.
-  char* data = NewBlock(nodeBytes + textBytes);
+  // The first block, laid out as [nodes][text]: one allocation, no header.
+  // Cur/End are left covering the node area only: whatever the nodes do not
+  // use is what AddHeader/SetHeader can still carve from, while the text area
+  // is full by construction.
+  if (nodeBytes > SIZE_MAX - textBytes)
+  {
+    throw std::bad_alloc();
+  }
+
+  char* data = static_cast<char*>(::operator new(nodeBytes + textBytes));
+
+  Primary = data;
+  Cur = data;
   End = data + nodeBytes;
 
   return End;
@@ -209,7 +237,7 @@ void Headers::Reserve(size_t bytes)
     return;
   }
 
-  NewBlock(std::max(ArenaSize - sizeof(Block), bytes));
+  NewArena(std::max(ArenaSize - sizeof(Arena), bytes));
 }
 
 void* Headers::TakeNode(size_t size)
@@ -294,20 +322,25 @@ Field* Headers::NewField(std::string_view storedKey, uint32_t hash)
 
 void Headers::AppendValue(Field* field, std::string_view storedValue)
 {
+  ValueList& values = field->Values;
+
+  if (values.empty())
+  {
+    // The first value is the field's own: no node of its own.
+    values.Head.Text = storedValue;
+    field->Capacity = CapacityOf(storedValue.size());
+    return;
+  }
+
   FieldValue* value = new (TakeNode(sizeof(FieldValue))) FieldValue();
   value->Text = storedValue;
 
-  if (!field->Values.First)
-  {
-    field->Capacity = CapacityOf(storedValue.size());
-  }
-
-  field->Values.Append(value);
+  values.Last->Next = value;
+  values.Last = value;
 }
 
 void Headers::LinkField(Field* field)
 {
-  field->Prev = Header.Last;
   field->Next = nullptr;
 
   if (Header.Last)
@@ -336,24 +369,35 @@ void Headers::LinkField(Field* field)
   }
 }
 
+Field* Headers::FindPrevious(const Field* field) const
+{
+  Field* previous = nullptr;
+  for (Field* current = Header.First; current && current != field; current = current->Next)
+  {
+    previous = current;
+  }
+
+  return previous;
+}
+
 void Headers::UnlinkField(Field* field)
 {
-  if (field->Prev)
+  // No back link is kept per field (it would cost 8 bytes in every one of
+  // them); deleting a header is rare enough to walk the list for it.
+  Field* previous = FindPrevious(field);
+
+  if (previous)
   {
-    field->Prev->Next = field->Next;
+    previous->Next = field->Next;
   }
   else
   {
     Header.First = field->Next;
   }
 
-  if (field->Next)
+  if (Header.Last == field)
   {
-    field->Next->Prev = field->Prev;
-  }
-  else
-  {
-    Header.Last = field->Prev;
+    Header.Last = previous;
   }
 
   --Header.Count;
@@ -397,10 +441,13 @@ void Headers::IndexField(Field* field)
 
 void Headers::BuildTable()
 {
-  // Load stays between 1/4 (right after a build) and 1/2 (when the next
-  // add rebuilds), so a probe always reaches an empty slot.
-  size_t capacity = 64;
-  while (capacity < Header.Count * 4)
+  // At most half full when built, and the next add past that rebuilds, so a
+  // probe always reaches an empty slot. During Parse() the table is sized for
+  // every field the block can still bring (IndexHint), so it is built once.
+  const size_t expected = std::max(Header.Count, IndexHint);
+
+  size_t capacity = 128;
+  while (capacity < expected * 2)
   {
     capacity <<= 1;
   }
@@ -425,7 +472,7 @@ void Headers::BuildTable()
 
 void Headers::AddNew(std::string_view field, uint32_t hash, std::string_view value)
 {
-  Reserve(NodeSlot(sizeof(Field)) + NodeSlot(sizeof(FieldValue)) + field.size() + value.size() + 2 + NodePadding);
+  Reserve(NodeSlot(sizeof(Field)) + field.size() + value.size() + 2 + NodePadding);
 
   // The key is stored the way this object keeps all of them: lowercased for
   // LowerCase headers, as given otherwise.
@@ -469,7 +516,8 @@ void Headers::AssignFields(const Headers& other)
   size_t textBytes = 0;
   for (const Field& field : other.Header)
   {
-    nodeBytes += NodeSlot(sizeof(Field)) + field.Values.size() * NodeSlot(sizeof(FieldValue));
+    // The first value is inside the Field; only the others take a node.
+    nodeBytes += NodeSlot(sizeof(Field)) + (field.Values.size() - 1) * NodeSlot(sizeof(FieldValue));
     textBytes += field.Key.size() + 1;
 
     for (std::string_view value : field.Values)
@@ -506,7 +554,6 @@ void Headers::AssignFields(const Headers& other)
 
     // Appends to the list; the table is built once at the end instead of
     // being grown field by field.
-    field->Prev = Header.Last;
     if (Header.Last)
     {
       Header.Last->Next = field;
@@ -726,19 +773,32 @@ HEADER_ERROR Headers::Parse(
     return (HEADER_ERROR)Size;
   }
 
-  // Every line of the block can become one field with one value, so the
-  // number of '\n' bounds the number of nodes (the request/status line and
-  // repeated names only make that an overestimate).
-  size_t lines = 1;
+  // The header lines are the ones between the first line and the empty one
+  // that ends the block, so there are two fewer of them than line ends (a
+  // block cut by Find2CRLF has nothing after the empty line). Each of them
+  // takes at most one node of the size of a Field: it either starts a field,
+  // or adds a value, and a value node is smaller.
+  size_t lineEnds = 0;
   for (const char* p = data; (p = (const char*)memchr(p, '\n', data + Size - p)) != nullptr; ++p)
   {
-    ++lines;
+    ++lineEnds;
   }
+
+  const size_t maxFields = lineEnds > 2 ? lineEnds - 2 : 0;
+
+  struct HintReset
+  {
+    size_t& Hint;
+    explicit HintReset(size_t& hint) : Hint(hint) {}
+    ~HintReset() { Hint = 0; }
+  } hintReset(IndexHint);
+
+  IndexHint = maxFields;
 
   // The block is copied once; everything below only writes NULs into the
   // copy and points the fields at it. The nodes are built in the same
   // allocation, in front of the text.
-  char* buf = NewLayout(lines * (NodeSlot(sizeof(Field)) + NodeSlot(sizeof(FieldValue))), Size + 1);
+  char* buf = NewLayout(maxFields * NodeSlot(sizeof(Field)), Size + 1);
   memcpy(buf, data, Size);
   buf[Size] = '\0';
 
@@ -1131,13 +1191,13 @@ void Headers::SetHeader(
     return;
   }
 
-  // Replace all the values by the new one. The first node is reused, and
-  // the old text as well when the new value fits into it, so setting a
+  // Replace all the values by the new one. The first value is the field's
+  // own and its text is reused when the new value fits into it, so setting a
   // header over and over does not keep consuming arena.
-  FieldValue* first = found->Values.First;
-  if (!first)
+  FieldValue& first = found->Values.Head;
+  if (found->Values.empty())
   {
-    Reserve(NodeSlot(sizeof(FieldValue)) + value.size() + 1 + NodePadding);
+    Reserve(value.size() + 1 + NodePadding);
     AppendValue(found, StoreText(value, false));
     return;
   }
@@ -1147,25 +1207,24 @@ void Headers::SetHeader(
     // Fits into the room the first value was given, whatever its length is
     // right now. value may point into this very buffer, hence memmove, and
     // may be a default-constructed (null) view, hence the check.
-    char* dst = const_cast<char*>(first->Text.data());
+    char* dst = const_cast<char*>(first.Text.data());
     if (!value.empty())
     {
       memmove(dst, value.data(), value.size());
     }
 
     dst[value.size()] = '\0';
-    first->Text = std::string_view(dst, value.size());
+    first.Text = std::string_view(dst, value.size());
   }
   else
   {
     Reserve(value.size() + 1);
-    first->Text = StoreText(value, false);
+    first.Text = StoreText(value, false);
     found->Capacity = CapacityOf(value.size());
   }
 
-  first->Next = nullptr;
-  found->Values.Last = first;
-  found->Values.Count = 1;
+  first.Next = nullptr;
+  found->Values.Last = &first;
 }
 
 void Headers::AddHeader(std::string_view field, std::string_view value)
